@@ -3,7 +3,8 @@ package com.combat.nomm
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.drag
+import androidx.compose.foundation.gestures.horizontalDrag
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
@@ -19,8 +20,12 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -74,15 +79,15 @@ fun SettingsScreen() {
                     "Changelogs",
                     "Shows the Changelogs for the previous Versions.",
                     onClick = {
-                            SettingsManager.criticalInformation.add(
-                                Triple(
-                                    buildAnnotatedString {
-                                        append("Changelogs")
-                                    },
-                                    changelogsAnnotatedString(),
-                                    null
-                                )
+                        SettingsManager.criticalInformation.add(
+                            Triple(
+                                buildAnnotatedString {
+                                    append("Changelogs")
+                                },
+                                changelogsAnnotatedString(),
+                                null
                             )
+                        )
                     }
                 )
                 ClickableSettingsRow(
@@ -183,7 +188,9 @@ fun SettingsScreen() {
             }
             SettingsGroup(title = "Appearance") {
                 SettingsColorPicker(
-                    label = "Theme Seed Color", selectedHSV = currentConfig.seedColorHSVColor, onHSVSelected = { newHSV ->
+                    label = "Theme Seed Color",
+                    selectedHSV = currentConfig.seedColorHSVColor,
+                    onHSVSelected = { newHSV ->
                         SettingsManager.updateConfig(
                             currentConfig.copy(seedColorHSVColor = newHSV)
                         )
@@ -521,17 +528,18 @@ fun SettingsColorPicker(
             selectedHSV.copy(value = i / 63f).color
         }
     }
-    
-    
+
+
     var open by remember { mutableStateOf(false) }
-    
+
     Column(modifier = Modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Surface(
             shape = MaterialTheme.shapes.small,
             modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min).clip(MaterialTheme.shapes.small)
                 .pointerHoverIcon(PointerIcon.Hand),
             onClick = {
-                open = !open },
+                open = !open
+            },
             color = Color.Transparent
         ) {
             Column(
@@ -544,33 +552,37 @@ fun SettingsColorPicker(
                 )
                 Box(
                     modifier = Modifier
-                        .height(32.dp).width(width).clip(MaterialTheme.shapes.small).background(selectedHSV.color), contentAlignment = Alignment.CenterStart
+                        .height(32.dp).width(width).clip(MaterialTheme.shapes.small).background(selectedHSV.color),
+                    contentAlignment = Alignment.CenterStart
                 ) {}
 
             }
         }
-        
+
         if (open) {
-                Row(
-                    modifier = Modifier.padding(4.dp).width(width).height(IntrinsicSize.Min),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Spacer(Modifier.width(8.dp))
-                    VerticalDivider(color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.fillMaxHeight().padding(bottom = 4.dp))
-                    Column(modifier = Modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        SingleChannelColorPicker("Hue", hueColors, {
-                            onHSVSelected.invoke(selectedHSV.copy(hue = it))
-                        }, selectedHSV.hue, Modifier.fillMaxWidth())
-                        SingleChannelColorPicker("Saturation", saturationColors, {
-                            onHSVSelected.invoke(selectedHSV.copy(saturation = it))
-                        }, selectedHSV.saturation, Modifier.fillMaxWidth())
-                        SingleChannelColorPicker("Value", valueColors, {
-                            onHSVSelected.invoke(selectedHSV.copy(value = it))
-                        }, selectedHSV.value, Modifier.fillMaxWidth())
-                    }
+            Row(
+                modifier = Modifier.padding(4.dp).width(width).height(IntrinsicSize.Min),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Spacer(Modifier.width(8.dp))
+                VerticalDivider(
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.fillMaxHeight().padding(bottom = 4.dp)
+                )
+                Column(modifier = Modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SingleChannelColorPicker("Hue", hueColors, {
+                        onHSVSelected.invoke(selectedHSV.copy(hue = it.coerceIn(0f, 1f)))
+                    }, selectedHSV.hue, Modifier.fillMaxWidth(), valueRangeEnd = 360)
+                    SingleChannelColorPicker("Saturation", saturationColors, {
+                        onHSVSelected.invoke(selectedHSV.copy(saturation = it.coerceIn(0f, 1f)))
+                    }, selectedHSV.saturation, Modifier.fillMaxWidth())
+                    SingleChannelColorPicker("Value", valueColors, {
+                        onHSVSelected.invoke(selectedHSV.copy(value = it.coerceIn(0f, 1f)))
+                    }, selectedHSV.value, Modifier.fillMaxWidth())
                 }
             }
-        
+        }
+
     }
 }
 
@@ -580,10 +592,35 @@ fun SingleChannelColorPicker(
     channelColors: List<Color>,
     onValueChange: (Float) -> Unit,
     selectedChannelValue: Float,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    valueRangeEnd: Int = 100,
 ) {
     val currentOnValueChange by rememberUpdatedState(onValueChange)
     var trackWidthPx by remember { mutableIntStateOf(0) }
+
+    val textStyle = MaterialTheme.typography.bodyMedium.copy(
+        textAlign = TextAlign.Center,
+        color = MaterialTheme.colorScheme.onSurface
+    )
+
+    val textMeasurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val textFieldWidthDp = remember(valueRangeEnd, textStyle, density) {
+        val maxDigits = valueRangeEnd.toString().length
+        val sampleMaxString = "0".repeat(maxDigits)
+
+        val measuredTextPx = textMeasurer.measure(
+            text = sampleMaxString,
+            style = textStyle,
+            maxLines = 1
+        ).size.width
+
+        val paddingPx = with(density) { (16.dp + 8.dp).toPx() }
+        with(density) { (measuredTextPx + paddingPx).toDp() }
+    }
+
+    val formattedText = (selectedChannelValue * valueRangeEnd).roundToInt().toString()
+    var textValue by remember(formattedText) { mutableStateOf(formattedText) }
 
     Column(modifier = modifier, Arrangement.spacedBy(8.dp)) {
         Text(
@@ -591,50 +628,94 @@ fun SingleChannelColorPicker(
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurface
         )
-
-        Box(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(32.dp)
-                .onSizeChanged { trackWidthPx = it.width },
-            contentAlignment = Alignment.CenterStart
+                .height(32.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, alignment = Alignment.Start)
         ) {
+            val interactionSource = remember { MutableInteractionSource() }
+
+            BasicTextField(
+                value = textValue,
+                onValueChange = { newText ->
+                    newText.toIntOrNull()?.let { value ->
+                        val clamped = value.coerceIn(0, valueRangeEnd)
+                        currentOnValueChange(clamped.toFloat() / valueRangeEnd)
+                    }
+                },
+                modifier = Modifier
+                    .width(textFieldWidthDp)
+                    .defaultMinSize(minHeight = 32.dp),
+                interactionSource = interactionSource,
+                textStyle = textStyle,
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                singleLine = true,
+                decorationBox = { innerTextField ->
+                    OutlinedTextFieldDefaults.DecorationBox(
+                        value = textValue,
+                        innerTextField = innerTextField,
+                        visualTransformation = VisualTransformation.None,
+                        enabled = true,
+                        singleLine = true,
+                        interactionSource = interactionSource,
+                        container = {
+                            OutlinedTextFieldDefaults.Container(
+                                enabled = true,
+                                isError = false,
+                                interactionSource = interactionSource,
+                            )
+                        },
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            )
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .clip(MaterialTheme.shapes.small)
-                    .background(Brush.horizontalGradient(colors = channelColors))
-                    .pointerHoverIcon(PointerIcon.Hand)
-                    .pointerInput(Unit) {
-                        awaitEachGesture {
-                            val down = awaitFirstDown()
-                            val initialHue = (down.position.x / size.width).coerceIn(0f, 1f)
-                            currentOnValueChange(initialHue)
+                    .onSizeChanged { trackWidthPx = it.width }
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(MaterialTheme.shapes.small)
+                        .background(Brush.horizontalGradient(colors = channelColors))
+                        .pointerHoverIcon(PointerIcon.Hand)
+                        .pointerInput(Unit) {
+                            awaitEachGesture {
+                                val down = awaitFirstDown()
+                                val updateValue = { x: Float ->
+                                    currentOnValueChange((x / size.width).coerceIn(0f, 1f))
+                                }
 
-                            drag(down.id) { change ->
-                                val newHSV = (change.position.x / size.width).coerceIn(0f, 1f)
-                                currentOnValueChange(newHSV)
-                                change.consume()
+                                updateValue(down.position.x)
+
+                                horizontalDrag(down.id) { change ->
+                                    updateValue(change.position.x)
+                                    change.consume()
+                                }
                             }
                         }
-                    }
-            )
+                )
 
-            Box(
-                Modifier
-                    .offset {
-                        val thumbWidthPx = 8.dp.roundToPx()
-                        val xPos = (selectedChannelValue * trackWidthPx).roundToInt() - (thumbWidthPx / 2)
-                        IntOffset(x = xPos, y = 0)
-                    }
-                    .requiredHeight(44.dp)
-                    .width(8.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.onSurface)
-            )
+                Box(
+                    Modifier
+                        .offset {
+                            val thumbWidthPx = 8.dp.roundToPx()
+                            val xPos = (selectedChannelValue * trackWidthPx).roundToInt() - (thumbWidthPx / 2)
+                            IntOffset(x = xPos, y = 0)
+                        }
+                        .requiredHeight(44.dp)
+                        .width(8.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.onSurface)
+                )
+            }
         }
     }
 }
+
 
 @Composable
 fun SettingsSwitchRow(
@@ -703,60 +784,76 @@ fun SettingsInfoRow(
     }
 }
 
-
 @Composable
 fun SettingsTextFieldRow(
     label: String,
     value: String,
     onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
     placeholder: String = "",
+    debounceMillis: Long = 500L
 ) {
     var localText by remember(value) { mutableStateOf(value) }
+    val currentOnValueChange by rememberUpdatedState(onValueChange)
 
     LaunchedEffect(localText) {
         if (localText != value) {
-            delay(500.milliseconds)
-            onValueChange(localText)
+            delay(debounceMillis.milliseconds)
+            currentOnValueChange(localText)
         }
     }
 
+    val interactionSource = remember { MutableInteractionSource() }
+
     Column(
-        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min).padding(4.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurface
         )
 
         BasicTextField(
             value = localText,
             onValueChange = { localText = it },
-            modifier = Modifier.fillMaxWidth(),
-            textStyle = MaterialTheme.typography.bodyMediumEmphasized.copy(
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .fillMaxWidth()
+                .defaultMinSize(minHeight = 32.dp),
+            interactionSource = interactionSource,
+            textStyle = MaterialTheme.typography.bodyMedium.copy(
+                color = MaterialTheme.colorScheme.onSurface
             ),
             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
             singleLine = true,
             decorationBox = { innerTextField ->
-                Box(
-                    modifier = Modifier.border(
-                        Dp.Hairline,
-                        MaterialTheme.colorScheme.outline,
-                        MaterialTheme.shapes.small
-                    ).padding(4.dp), contentAlignment = Alignment.CenterStart
-                ) {
-                    if (localText.isEmpty()) {
-                        Text(
-                            text = placeholder,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                OutlinedTextFieldDefaults.DecorationBox(
+                    value = localText,
+                    innerTextField = innerTextField,
+                    enabled = true,
+                    singleLine = true,
+                    visualTransformation = VisualTransformation.None,
+                    interactionSource = interactionSource,
+                    placeholder = if (placeholder.isNotEmpty()) {
+                        {
+                            Text(
+                                text = placeholder,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    } else null,
+                    container = {
+                        OutlinedTextFieldDefaults.Container(
+                            enabled = true,
+                            isError = false,
+                            interactionSource = interactionSource,
                         )
-                    }
-                    innerTextField()
-                }
-            })
+                    },
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
+        )
     }
 }
 
