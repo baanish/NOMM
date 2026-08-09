@@ -1,7 +1,8 @@
 package com.combat.nomm
 
 import androidx.compose.runtime.*
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.window.WindowPlacement
 import com.materialkolor.Contrast
 import com.materialkolor.PaletteStyle
@@ -47,11 +48,18 @@ data class Configuration(
     val ignoreNewUpdates: Boolean = false,
     val nosmr: Boolean = true,
     val steamworks: Boolean = true,
-    val hueValue: Float = 0.3f,
+    val seedColorHSVColor: HSVColor = HSVColor(0.3f, 1f),
+    val customScheme: Boolean = false,
+    val primaryColorHSVColor: HSVColor = HSVColor(0.3f, 1f),
+    val secondaryColorHSVColor: HSVColor = HSVColor(0.3f, 1f),
+    val tertiaryColorHSVColor: HSVColor = HSVColor(0.3f, 1f),
+    val neutralColorHSVColor: HSVColor = HSVColor(0.3f, 1f),
+    val neutralVariantColorHSVColor: HSVColor = HSVColor(0.3f, 1f),
+    val errorColorHSVColor: HSVColor = HSVColor(0.3f, 1f),
     val placement: WindowPlacement = WindowPlacement.Floating,
 ) {
-    val themeColor: Color
-        get() = Color.hsv(hueValue * 360f, 1f, 1f)
+
+
 }
 
 @OptIn(FlowPreview::class)
@@ -65,7 +73,7 @@ object SettingsManager {
         field = mutableStateOf(loadCachedManifest())
 
 
-    val criticalInformation = mutableStateListOf<Triple<String, String, Continuation<Unit>?>>()
+    val criticalInformation = mutableStateListOf<Triple<AnnotatedString, AnnotatedString, Continuation<Unit>?>>()
 
     var availableUpdateInfo by mutableStateOf<UpdateInfo?>(null)
 
@@ -140,5 +148,11 @@ object SettingsManager {
 
 fun reportNommError(title: String, message: String) {
     println("[NOMM] $title: $message")
-    SettingsManager.criticalInformation.add(Triple(title, message, null))
+    SettingsManager.criticalInformation.add(
+        Triple(
+            buildAnnotatedString { append(title) },
+            buildAnnotatedString { append(message) },
+            null
+        )
+    )
 }

@@ -35,6 +35,16 @@ class Version(vararg components: Int) : Comparable<Version> {
         return 0
     }
 
+    companion object {
+
+        fun fromString(string: String): Version {
+            val parts = string.split('.')
+                .map { it.replace(nonDigitRegex, "").toInt() }
+                .toIntArray()
+
+            return Version(*parts)
+        }
+    }
 }
 
 private val nonDigitRegex = "\\D+".toRegex()
@@ -49,10 +59,8 @@ object VersionSerializer : KSerializer<Version> {
 
     override fun deserialize(decoder: Decoder): Version {
         val string = decoder.decodeString()
-        val parts = string.split('.')
-            .map { it.replace(nonDigitRegex, "").toInt() }
-            .toIntArray()
-
-        return Version(*parts)
+        return Version.fromString(string)
     }
 }
+
+

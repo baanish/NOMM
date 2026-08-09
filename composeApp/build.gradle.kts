@@ -15,12 +15,8 @@ plugins {
     alias(libs.plugins.buildkonfig)
 }
 
-val appVersion = "5.0.8"
+val appVersion = "5.1.0"
 
-val changelog = """
-    Linux fixes: Path related lookups.
-    Added auto-update checks for Portable&ZIP installs.
-""".trimIndent()
 
 java {
     toolchain {
@@ -91,7 +87,6 @@ buildkonfig {
     packageName = "com.combat.nomm"
     defaultConfigs {
         buildConfigField(FieldSpec.Type.STRING, "VERSION", appVersion)
-        buildConfigField(FieldSpec.Type.STRING, "CHANGELOG", changelog)
     }
 }
 

@@ -1,16 +1,25 @@
 package com.combat.nomm
 
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import dev.nucleusframework.updater.NucleusUpdater
 import dev.nucleusframework.updater.UpdateEvent
@@ -79,10 +88,19 @@ fun Dialogs() {
         postUpdateEvent?.let { event ->
             SettingsManager.criticalInformation.add(
                 Triple(
-                    "Updated from ${event.previousVersion} to ${event.newVersion}",
-                    BuildKonfig.CHANGELOG,
+                    buildAnnotatedString {
+                        append("Updated from ")
+                        withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                            append(event.previousVersion)
+                        }
+                        append(" to ")
+                        withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                            append(event.newVersion)
+                        }
+                    },
+                    changelogsAnnotatedString(),
                     null
-                    )
+                )
             )
         }
         checkForUpdate()
@@ -140,7 +158,7 @@ fun ManualUpdateDialog(
         text = {
             Text(
                 text = "Automatic updates are not available for the Windows portable or ZIP version. " +
-                    "Download the latest release from GitHub and replace the current NOMM files.",
+                        "Download the latest release from GitHub and replace the current NOMM files.",
                 style = MaterialTheme.typography.bodyLarge,
             )
         },
@@ -236,10 +254,13 @@ fun UpdateDialog(
 }
 
 @Composable
-fun CriticalDialog(criticalInformation: String, additional: String, onDismiss: () -> Unit) {
+fun CriticalDialog(criticalInformation: AnnotatedString, additional: AnnotatedString, onDismiss: () -> Unit) {
     val isModUpdateDialog = criticalInformation.contains("Available Mod Update")
 
     AlertDialog(
+        modifier = Modifier
+            .fillMaxWidth(0.85f)
+            .fillMaxHeight(0.85f),
         onDismissRequest = {
             onDismiss()
         },
@@ -250,10 +271,48 @@ fun CriticalDialog(criticalInformation: String, additional: String, onDismiss: (
             )
         },
         text = {
-            Text(
-                text = additional,
-                style = MaterialTheme.typography.bodyLarge
-            )
+            val state = rememberScrollState()
+
+            val isScrollable by remember {
+                derivedStateOf { state.maxValue > 0 }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .verticalScroll(state)
+                ) {
+                    SelectionContainer {
+                        Text(
+                            text = additional,
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                }
+
+                if (isScrollable) {
+                    VerticalScrollbar(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .width(8.dp)
+                            .padding(vertical = 8.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        adapter = rememberScrollbarAdapter(state),
+                        style = defaultScrollbarStyle().copy(
+                            unhoverColor = MaterialTheme.colorScheme.outline,
+                            hoverColor = MaterialTheme.colorScheme.primary,
+                            thickness = 8.dp,
+                            shape = CircleShape
+                        )
+                    )
+                }
+            }
         },
         confirmButton = {
             if (isModUpdateDialog) {

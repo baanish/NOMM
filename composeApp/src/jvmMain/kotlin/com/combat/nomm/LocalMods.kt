@@ -1,16 +1,16 @@
 package com.combat.nomm
 
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import io.github.vinceglb.filekit.*
 import io.github.vinceglb.filekit.dialogs.*
 import io.github.vinceglb.filekit.utils.toKotlinxIoPath
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.number
 import kotlinx.datetime.toLocalDateTime
@@ -24,6 +24,7 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.milliseconds
 
 object LocalMods {
     val isBepInExInstalled: StateFlow<Boolean>
@@ -39,7 +40,8 @@ object LocalMods {
 
     internal var nosmrExportJob: Job? = null
 
-    @Volatile private var refreshInProgress = false
+    @Volatile
+    private var refreshInProgress = false
 
 
     fun exportMods() {
@@ -158,7 +160,7 @@ object LocalMods {
 
                 val importedIds = imported?.map { it.id }
                 mods.value.forEach { (_, meta) ->
-                    if (meta.id in LocalMods.protectedIds) return@forEach
+                    if (meta.id in protectedIds) return@forEach
                     if (importedIds?.contains(meta.id) == true) {
                         meta.enable()
                     } else {
@@ -170,7 +172,9 @@ object LocalMods {
     }
 
     private suspend fun importZipMods(file: File, pluginsDir: File): String? {
-        val stagingDir = Files.createTempDirectory("nomm-modpack-").toFile()
+        val stagingDir = withContext(Dispatchers.IO) {
+            Files.createTempDirectory("nomm-modpack-")
+        }.toFile()
         try {
             var modlist: String? = null
             val warnedMods = mutableSetOf<String>()
@@ -195,8 +199,16 @@ object LocalMods {
                                     suspendCancellableCoroutine { continuation ->
                                         SettingsManager.criticalInformation.add(
                                             Triple(
-                                                "Modpack includes the Local Mod $rootModName",
-                                                "Make sure you trust the source, or remove the mod to stay safe.",
+                                                buildAnnotatedString {
+                                                    append("Modpack includes the Local Mod ")
+
+                                                    withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                                                        append(
+                                                            rootModName
+                                                        )
+                                                    }
+                                                },
+                                                buildAnnotatedString { append("Make sure you trust the source, or remove the mod to stay safe.") },
                                                 continuation
                                             )
                                         )
@@ -226,8 +238,8 @@ object LocalMods {
                 suspendCancellableCoroutine { continuation ->
                     SettingsManager.criticalInformation.add(
                         Triple(
-                            "Modpack does not include a Modlist.",
-                            "Local Mods from the Modpack have been added.",
+                            buildAnnotatedString { append("Modpack does not include a Modlist.") },
+                            buildAnnotatedString { append("Local Mods from the Modpack have been added.") },
                             continuation
                         )
                     )
@@ -413,7 +425,7 @@ object LocalMods {
 
     fun disableAll() {
         mods.value.forEach { (_, meta) ->
-            if (meta.id in LocalMods.protectedIds) return@forEach
+            if (meta.id in protectedIds) return@forEach
             meta.disable()
         }
     }
@@ -526,7 +538,7 @@ data class ModMeta(
     fun giveNOSMRnommpack() {
         LocalMods.nosmrExportJob?.cancel()
         LocalMods.nosmrExportJob = scope.launch {
-            delay(500)
+            delay(500.milliseconds)
             val file = LocalMods.mods.value["NOSMR"]?.file?.toKotlinxIoPath()?.let {
                 PlatformFile(it)
             } ?: return@launch

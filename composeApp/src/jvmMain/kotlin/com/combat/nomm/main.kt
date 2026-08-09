@@ -43,6 +43,7 @@ import org.jetbrains.compose.resources.painterResource
 import java.io.File
 import java.net.URI
 import kotlin.io.path.toPath
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 
@@ -95,7 +96,15 @@ fun main(args: Array<String>) {
         val windowState = rememberWindowState(placement = SettingsManager.config.value.placement)
 
         NOMMTheme(
-            configuration.themeColor, useDarkTheme,
+            configuration.seedColorHSVColor.color,
+            configuration.customScheme,
+            configuration.primaryColorHSVColor.color,
+            configuration.secondaryColorHSVColor.color,
+            configuration.tertiaryColorHSVColor.color,
+            configuration.neutralColorHSVColor.color,
+            configuration.neutralVariantColorHSVColor.color,
+            configuration.errorColorHSVColor.color,
+            useDarkTheme,
             configuration.paletteStyle,
             configuration.contrast
         ) {
@@ -103,7 +112,7 @@ fun main(args: Array<String>) {
                 onCloseRequest = {
                     runBlocking {
                         try {
-                            withTimeout(5000) {
+                            withTimeout(5000.milliseconds) {
                                 SettingsManager.updateConfig(SettingsManager.config.value.copy(placement = windowState.placement))
                                 SettingsManager.saveConfig()
                                 SettingsManager.saveCachedManifest()
@@ -140,7 +149,7 @@ fun main(args: Array<String>) {
                             if (isMinimized && !wasMinimized) {
                                 println("[NOMM] Window minimized")
                                 wasMinimized = true
-                                suspendJob = launch {
+                                suspendJob = this@LaunchedEffect.launch {
                                     delay(60.seconds)
                                     if (windowState.isMinimized && !SteamDiscovery.isGameRunning()) {
                                         println("[NOMM] Suspending Steam worker due to minimization")
@@ -174,7 +183,7 @@ fun main(args: Array<String>) {
                             if (!isOnServers && wasOnServers) {
                                 println("[NOMM] Navigated away from Servers")
                                 wasOnServers = false
-                                screenSuspendJob = launch {
+                                screenSuspendJob = this@LaunchedEffect.launch {
                                     delay(10.seconds)
                                     if (currentScreen.value != MainNavigation.Servers
                                         && !SteamDiscovery.isGameRunning()

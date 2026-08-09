@@ -1,5 +1,9 @@
 package com.combat.nomm
 
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -10,7 +14,7 @@ import java.io.File
 object RepoMods {
     private val mutex = Mutex()
 
-    val mods: StateFlow<Map<String,Extension>>
+    val mods: StateFlow<Map<String, Extension>>
         field = MutableStateFlow(emptyMap())
 
     val isLoading: StateFlow<Boolean>
@@ -42,14 +46,21 @@ object RepoMods {
             val updatable = LocalMods.mods.value.filter { it.value.hasUpdate }
                 .mapNotNull { mods.value[it.key] }
             if (updatable.isNotEmpty() && !SettingsManager.config.value.ignoreNewUpdates) {
-                val hasExistingUpdateNotification = SettingsManager.criticalInformation.any { 
-                    it.first.contains("Available Mod Update") 
+                val hasExistingUpdateNotification = SettingsManager.criticalInformation.any {
+                    it.first.contains("Available Mod Update")
                 }
                 if (!hasExistingUpdateNotification) {
                     SettingsManager.criticalInformation.add(
                         Triple(
-                            "${updatable.size} Available Mod Update${if (updatable.size > 1) "s" else ""}",
-                            updatable.joinToString(separator = "\n") { it.displayName },
+                            buildAnnotatedString {
+                                withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                                    append("${updatable.size}")
+                                }
+                                append("Available Mod Update${if (updatable.size > 1) "s" else ""}")
+                            },
+                            buildAnnotatedString {
+                                updatable.joinToString(separator = "\n") { it.displayName }
+                            },
                             null
                         )
                     )
@@ -137,11 +148,13 @@ object RepoMods {
             }
         }
     }
-    
 
-    fun installMod(id: String, url: String, hash: String? = null, onSuccess: (dir: File) -> Unit = {
-        
-    }) {
+
+    fun installMod(
+        id: String, url: String, hash: String? = null, onSuccess: (dir: File) -> Unit = {
+
+        }
+    ) {
         val gameFolderError = validateNuclearOptionGameFolder(SettingsManager.gameFolder)
         if (gameFolderError != null) {
             reportNommError("Cannot install mod", gameFolderError)

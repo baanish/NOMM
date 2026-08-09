@@ -18,9 +18,12 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.materialkolor.Contrast
 import com.materialkolor.PaletteStyle
@@ -30,7 +33,9 @@ import io.github.vinceglb.filekit.dialogs.openDirectoryPicker
 import io.github.vinceglb.filekit.filesDir
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
 import java.io.File
+import kotlin.math.roundToInt
 import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
@@ -66,6 +71,21 @@ fun SettingsScreen() {
                     }
                 )
                 ClickableSettingsRow(
+                    "Changelogs",
+                    "Shows the Changelogs for the previous Versions.",
+                    onClick = {
+                            SettingsManager.criticalInformation.add(
+                                Triple(
+                                    buildAnnotatedString {
+                                        append("Changelogs")
+                                    },
+                                    changelogsAnnotatedString(),
+                                    null
+                                )
+                            )
+                    }
+                )
+                ClickableSettingsRow(
                     "GitHub",
                     "github.com/Combat787/NOMM",
                     onClick = {
@@ -78,7 +98,7 @@ fun SettingsScreen() {
 
             SettingsGroup(title = "Path Configuration") {
                 ClickableSettingsRow(
-                    label = "Game Folder",
+                    label = "Nuclear Option Game Folder Location",
                     subLabel = currentConfig.gamePath?.takeIf { it.isNotBlank() } ?: "Not Found",
                     onClick = {
                         scope.launch {
@@ -122,24 +142,24 @@ fun SettingsScreen() {
                     label = "Ignore Manifest Version",
                     subLabel = "Stops checking if the manifest version is still the same when fetching.",
                     checked = currentConfig.ignoreManifestVersion,
-                    onCheckedChange = { newValue ->
-                        SettingsManager.updateConfig(currentConfig.copy(ignoreManifestVersion = newValue))
+                    onCheckedChange = { newHSV ->
+                        SettingsManager.updateConfig(currentConfig.copy(ignoreManifestVersion = newHSV))
                     }
                 )
                 SettingsSwitchRow(
                     label = "Ignore Hash Mismatch",
                     subLabel = "Stops checking if the Hash of a downloaded Mod is correct.",
                     checked = currentConfig.ignoreHashMismatch,
-                    onCheckedChange = { newValue ->
-                        SettingsManager.updateConfig(currentConfig.copy(ignoreHashMismatch = newValue))
+                    onCheckedChange = { newHSV ->
+                        SettingsManager.updateConfig(currentConfig.copy(ignoreHashMismatch = newHSV))
                     }
                 )
                 SettingsSwitchRow(
                     label = "Ignore Mod Updates",
                     subLabel = "Stops Mod Update Notifications.",
                     checked = currentConfig.ignoreNewUpdates,
-                    onCheckedChange = { newValue ->
-                        SettingsManager.updateConfig(currentConfig.copy(ignoreNewUpdates = newValue))
+                    onCheckedChange = { newHSV ->
+                        SettingsManager.updateConfig(currentConfig.copy(ignoreNewUpdates = newHSV))
                     }
                 )
                 ClickableSettingsRow(
@@ -155,19 +175,87 @@ fun SettingsScreen() {
                     label = "Fake Manifest",
                     subLabel = "Generates Fake Manifest Data useful to test the UI better.",
                     checked = currentConfig.fakeManifest,
-                    onCheckedChange = { newValue ->
-                        SettingsManager.updateConfig(currentConfig.copy(fakeManifest = newValue))
+                    onCheckedChange = { newHSV ->
+                        SettingsManager.updateConfig(currentConfig.copy(fakeManifest = newHSV))
                         RepoMods.fetchManifest()
                     }
                 )
             }
             SettingsGroup(title = "Appearance") {
                 SettingsColorPicker(
-                    label = "Theme Accent", selectedHue = currentConfig.hueValue, onHueSelected = { newHue ->
+                    label = "Theme Seed Color", selectedHSV = currentConfig.seedColorHSVColor, onHSVSelected = { newHSV ->
                         SettingsManager.updateConfig(
-                            currentConfig.copy(hueValue = newHue)
+                            currentConfig.copy(seedColorHSVColor = newHSV)
                         )
-                    })
+                    }
+                )
+                SettingsSwitchRow(
+                    label = "Custom Theme",
+                    subLabel = "Allows for more customization in the Theme.",
+                    checked = currentConfig.customScheme,
+                    onCheckedChange = { newHSV ->
+                        SettingsManager.updateConfig(
+                            currentConfig.copy(customScheme = newHSV)
+                        )
+
+                    }
+                )
+                if (currentConfig.customScheme) {
+                    SettingsColorPicker(
+                        label = "Theme Primary Color",
+                        selectedHSV = currentConfig.primaryColorHSVColor,
+                        onHSVSelected = { newHue ->
+                            SettingsManager.updateConfig(
+                                currentConfig.copy(primaryColorHSVColor = newHue)
+                            )
+                        }
+                    )
+                    SettingsColorPicker(
+                        label = "Theme Secondary Color",
+                        selectedHSV = currentConfig.secondaryColorHSVColor,
+                        onHSVSelected = { newHue ->
+                            SettingsManager.updateConfig(
+                                currentConfig.copy(secondaryColorHSVColor = newHue)
+                            )
+                        }
+                    )
+                    SettingsColorPicker(
+                        label = "Theme Tertiary Color",
+                        selectedHSV = currentConfig.tertiaryColorHSVColor,
+                        onHSVSelected = { newHue ->
+                            SettingsManager.updateConfig(
+                                currentConfig.copy(tertiaryColorHSVColor = newHue)
+                            )
+                        }
+                    )
+                    SettingsColorPicker(
+                        label = "Theme Neutral Color",
+                        selectedHSV = currentConfig.neutralColorHSVColor,
+                        onHSVSelected = { newHue ->
+                            SettingsManager.updateConfig(
+                                currentConfig.copy(neutralColorHSVColor = newHue)
+                            )
+                        }
+                    )
+                    SettingsColorPicker(
+                        label = "Theme Neutral Variant Color",
+                        selectedHSV = currentConfig.neutralVariantColorHSVColor,
+                        onHSVSelected = { newHue ->
+                            SettingsManager.updateConfig(
+                                currentConfig.copy(neutralVariantColorHSVColor = newHue)
+                            )
+                        }
+                    )
+                    SettingsColorPicker(
+                        label = "Theme Error Color",
+                        selectedHSV = currentConfig.errorColorHSVColor,
+                        onHSVSelected = { newHue ->
+                            SettingsManager.updateConfig(
+                                currentConfig.copy(errorColorHSVColor = newHue)
+                            )
+                        }
+                    )
+                }
                 SettingsDropdownRow(
                     label = "Theme Brightness",
                     subLabel = currentConfig.theme.toString(),
@@ -197,8 +285,8 @@ fun SettingsScreen() {
                     label = "NOSMR",
                     subLabel = "The Nuclear Option Server Mod Reporter allows your Nuclear Option Game to share its Modpack with the NOMM Server List allowing other NOMM users to join easily with the correct Mods.",
                     checked = currentConfig.nosmr,
-                    onCheckedChange = { newValue ->
-                        SettingsManager.updateConfig(currentConfig.copy(nosmr = newValue))
+                    onCheckedChange = { newHSV ->
+                        SettingsManager.updateConfig(currentConfig.copy(nosmr = newHSV))
                         if (SettingsManager.config.value.nosmr) {
                             LocalMods.mods.value["NOSMR"]?.enable()
                         } else {
@@ -210,9 +298,9 @@ fun SettingsScreen() {
                     label = "Steamworks Features",
                     subLabel = "Steamworks enables server browsing and joining",
                     checked = currentConfig.steamworks,
-                    onCheckedChange = { newValue ->
-                        SettingsManager.updateConfig(currentConfig.copy(steamworks = newValue))
-                        if (!newValue) {
+                    onCheckedChange = { newHSV ->
+                        SettingsManager.updateConfig(currentConfig.copy(steamworks = newHSV))
+                        if (!newHSV) {
                             scope.launch { SteamDiscovery.shutdown() }
                         }
                     }
@@ -376,50 +464,173 @@ fun <T> SettingsDropdownRow(
     }
 }
 
+fun Color.toHSVColor(): HSVColor {
+    val max = maxOf(red, green, blue)
+    val min = minOf(red, green, blue)
+    val delta = max - min
+
+    val rawHue = when {
+        delta == 0f -> 0f
+        max == red -> ((green - blue) / delta) % 6f
+        max == green -> ((blue - red) / delta) + 2f
+        else -> ((red - green) / delta) + 4f
+    } * 60f
+
+    val hue = if (rawHue < 0f) rawHue + 360f else rawHue
+    val saturation = if (max == 0f) 0f else delta / max
+    val value = max
+
+    return HSVColor(
+        hue = hue,                 // 0.0 .. 360.0
+        saturation = saturation,   // 0.0 .. 1.0
+        value = value              // 0.0 .. 1.0
+    )
+}
+
+@Serializable
+data class HSVColor(
+    val hue: Float = 0.3f,
+    val saturation: Float = 1f,
+    val value: Float = 1f,
+) {
+    val color
+        get() = Color.hsv(hue * 360, saturation, value)
+}
 
 @Composable
 fun SettingsColorPicker(
     label: String,
-    selectedHue: Float,
+    selectedHSV: HSVColor,
     width: Dp = 256.dp,
-    onHueSelected: (Float) -> Unit,
+    onHSVSelected: (HSVColor) -> Unit,
 ) {
-    val hueColors = remember {
+    val hueColors = remember(selectedHSV) {
         List(64) { i ->
-            Color.hsv((i / 63f) * 360f, 1f, 1f)
+            selectedHSV.copy(hue = i / 63f).color
         }
     }
 
-    Column(modifier = Modifier.padding(4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    val saturationColors = remember(selectedHSV) {
+        List(64) { i ->
+            selectedHSV.copy(saturation = i / 63f).color
+        }
+    }
+
+    val valueColors = remember(selectedHSV) {
+        List(64) { i ->
+            selectedHSV.copy(value = i / 63f).color
+        }
+    }
+    
+    
+    var open by remember { mutableStateOf(false) }
+    
+    Column(modifier = Modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Surface(
+            shape = MaterialTheme.shapes.small,
+            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min).clip(MaterialTheme.shapes.small)
+                .pointerHoverIcon(PointerIcon.Hand),
+            onClick = {
+                open = !open },
+            color = Color.Transparent
+        ) {
+            Column(
+                modifier = Modifier.padding(4.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    label, style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Box(
+                    modifier = Modifier
+                        .height(32.dp).width(width).clip(MaterialTheme.shapes.small).background(selectedHSV.color), contentAlignment = Alignment.CenterStart
+                ) {}
+
+            }
+        }
+        
+        if (open) {
+                Row(
+                    modifier = Modifier.padding(4.dp).width(width).height(IntrinsicSize.Min),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Spacer(Modifier.width(8.dp))
+                    VerticalDivider(color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.fillMaxHeight().padding(bottom = 4.dp))
+                    Column(modifier = Modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        SingleChannelColorPicker("Hue", hueColors, {
+                            onHSVSelected.invoke(selectedHSV.copy(hue = it))
+                        }, selectedHSV.hue, Modifier.fillMaxWidth())
+                        SingleChannelColorPicker("Saturation", saturationColors, {
+                            onHSVSelected.invoke(selectedHSV.copy(saturation = it))
+                        }, selectedHSV.saturation, Modifier.fillMaxWidth())
+                        SingleChannelColorPicker("Value", valueColors, {
+                            onHSVSelected.invoke(selectedHSV.copy(value = it))
+                        }, selectedHSV.value, Modifier.fillMaxWidth())
+                    }
+                }
+            }
+        
+    }
+}
+
+@Composable
+fun SingleChannelColorPicker(
+    label: String,
+    channelColors: List<Color>,
+    onValueChange: (Float) -> Unit,
+    selectedChannelValue: Float,
+    modifier: Modifier = Modifier
+) {
+    val currentOnValueChange by rememberUpdatedState(onValueChange)
+    var trackWidthPx by remember { mutableIntStateOf(0) }
+
+    Column(modifier = modifier, Arrangement.spacedBy(8.dp)) {
         Text(
-            label, style = MaterialTheme.typography.bodyLarge,
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurface
         )
 
         Box(
-            modifier = Modifier.width(width).height(32.dp), contentAlignment = Alignment.CenterStart
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(32.dp)
+                .onSizeChanged { trackWidthPx = it.width },
+            contentAlignment = Alignment.CenterStart
         ) {
             Box(
-                modifier = Modifier.fillMaxSize().clip(MaterialTheme.shapes.small).background(
-                    Brush.horizontalGradient(
-                        colors = hueColors
-                    )
-                ).pointerHoverIcon(PointerIcon.Hand).pointerInput(Unit) {
-                    awaitEachGesture {
-                        val down = awaitFirstDown()
-                        val initialHue = (down.position.x / size.width).coerceIn(0f, 1f)
-                        onHueSelected(initialHue)
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(MaterialTheme.shapes.small)
+                    .background(Brush.horizontalGradient(colors = channelColors))
+                    .pointerHoverIcon(PointerIcon.Hand)
+                    .pointerInput(Unit) {
+                        awaitEachGesture {
+                            val down = awaitFirstDown()
+                            val initialHue = (down.position.x / size.width).coerceIn(0f, 1f)
+                            currentOnValueChange(initialHue)
 
-                        drag(down.id) { change ->
-                            val newHue = (change.position.x / size.width).coerceIn(0f, 1f)
-                            onHueSelected(newHue)
-                            change.consume()
+                            drag(down.id) { change ->
+                                val newHSV = (change.position.x / size.width).coerceIn(0f, 1f)
+                                currentOnValueChange(newHSV)
+                                change.consume()
+                            }
                         }
                     }
-                })
+            )
+
             Box(
-                Modifier.offset(x = (selectedHue * width.value).dp - 4.dp).requiredHeight(44.dp).width(8.dp)
-                    .clip(CircleShape).background(MaterialTheme.colorScheme.onSurface)
+                Modifier
+                    .offset {
+                        val thumbWidthPx = 8.dp.roundToPx()
+                        val xPos = (selectedChannelValue * trackWidthPx).roundToInt() - (thumbWidthPx / 2)
+                        IntOffset(x = xPos, y = 0)
+                    }
+                    .requiredHeight(44.dp)
+                    .width(8.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.onSurface)
             )
         }
     }
@@ -493,7 +704,6 @@ fun SettingsInfoRow(
 }
 
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SettingsTextFieldRow(
     label: String,
@@ -550,7 +760,7 @@ fun SettingsTextFieldRow(
     }
 }
 
-private fun openFolder(folder: java.io.File) {
+private fun openFolder(folder: File) {
     if (!folder.exists()) {
         println("[NOMM] Folder does not exist: ${folder.absolutePath}")
         return
