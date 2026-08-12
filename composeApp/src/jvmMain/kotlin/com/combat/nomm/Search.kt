@@ -213,14 +213,14 @@ fun List<ServerEntry>.applyServerFilters(
     val anyActive =
         showFavorites || showModded || showVanilla || showUser || showDedicated || showPve || showPvp
     if (!anyActive) return this
+    val modGroupActive = showModded || showVanilla
+    val typeGroupActive = showUser || showDedicated
+    val modeGroupActive = showPve || showPvp
     return filter {
-        (showFavorites && it.isFavorite)
-                || (showModded && it.modlist != null)
-                || (showVanilla && it.modlist == null)
-                || (showUser && it.isLobby)
-                || (showDedicated && !it.isLobby)
-                || (showPvp && it.missionData?.pvpType == "1")
-                || (showPve && it.missionData?.pvpType == "2")
+        (!showFavorites || it.isFavorite)
+                && (!modGroupActive || (showModded && it.modlist != null) || (showVanilla && it.modlist == null))
+                && (!typeGroupActive || (showUser && it.isLobby) || (showDedicated && !it.isLobby))
+                && (!modeGroupActive || (showPvp && it.missionData?.pvpType == "1") || (showPve && it.missionData?.pvpType == "2"))
     }
 }
 

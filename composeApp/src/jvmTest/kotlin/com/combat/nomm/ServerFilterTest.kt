@@ -70,10 +70,26 @@ class ServerFilterTest {
     }
 
     @Test
-    fun `additional filters expand the result as a union`() {
+    fun `filters across groups intersect`() {
         assertEquals(
-            listOf("ded-modded-pvp", "ded-vanilla-pvp", "lobby-modded", "lobby-vanilla"),
-            servers.filter(showUser = true, showPvp = true)
+            listOf("ded-modded-pvp", "ded-modded-pve"),
+            servers.filter(showModded = true, showDedicated = true)
+        )
+        assertEquals(
+            listOf("lobby-modded"),
+            servers.filter(showUser = true, showModded = true)
+        )
+    }
+
+    @Test
+    fun `filters within a group still expand`() {
+        assertEquals(
+            servers.ips(),
+            servers.filter(showUser = true, showDedicated = true)
+        )
+        assertEquals(
+            listOf("ded-modded-pvp", "ded-modded-pve", "ded-vanilla-pvp"),
+            servers.filter(showPve = true, showPvp = true)
         )
     }
 
