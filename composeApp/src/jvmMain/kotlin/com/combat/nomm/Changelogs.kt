@@ -49,6 +49,7 @@ val changelogs = mutableMapOf(
     Version(5, 2, 0) to """
         Added OUTDATED tag to mods that are not built for the latest Game Version.
         Added Modded tag to servers that are modded!
+        Added Modded filter to server list filters.
         Added Filters to the Discovery menu.
     """.trimIndent(),
 )

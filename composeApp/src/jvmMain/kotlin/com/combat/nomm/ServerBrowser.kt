@@ -188,6 +188,7 @@ object ServerBrowser {
     var showDedicated: Boolean by mutableStateOf(true)
     var showPve: Boolean by mutableStateOf(true)
     var showPvp: Boolean by mutableStateOf(true)
+    var showModdedOnly: Boolean by mutableStateOf(false)
     var showFavoritesOnly: Boolean by mutableStateOf(false)
     var sortBy: SortType by mutableStateOf(SortType.PING)
 

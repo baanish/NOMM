@@ -28,7 +28,7 @@ fun ServerBrowserScreen(
     val serverList by ServerBrowser.servers.collectAsState()
 
     val filteredServers =
-        rememberFilteredServers(serverList, ServerBrowser.searchQuery, ServerBrowser.showUser, ServerBrowser.showDedicated, ServerBrowser.showPve, ServerBrowser.showPvp, ServerBrowser.showFavoritesOnly, ServerBrowser.sortBy)
+        rememberFilteredServers(serverList, ServerBrowser.searchQuery, ServerBrowser.showUser, ServerBrowser.showDedicated, ServerBrowser.showPve, ServerBrowser.showPvp, ServerBrowser.showModdedOnly, ServerBrowser.showFavoritesOnly, ServerBrowser.sortBy)
 
     LaunchedEffect(Unit) {
         if (ServerBrowser.servers.value.isEmpty()) {
@@ -153,6 +153,20 @@ fun ServerBrowserScreen(
                         leadingIcon = {
                             Icon(
                                 painterResource(if (ServerBrowser.showFavoritesOnly) Res.drawable.check_box_24px else Res.drawable.check_box_outline_blank_24px),
+                                null
+                            )
+                        },
+                        colors = itemColors,
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Modded") },
+                        onClick = {
+                            ServerBrowser.showModdedOnly = !ServerBrowser.showModdedOnly
+                        },
+                        leadingIcon = {
+                            Icon(
+                                painterResource(if (ServerBrowser.showModdedOnly) Res.drawable.check_box_24px else Res.drawable.check_box_outline_blank_24px),
                                 null
                             )
                         },
