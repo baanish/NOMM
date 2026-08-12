@@ -184,12 +184,13 @@ object ServerBrowser {
     @Volatile var modHashLookup: Map<String, PackageReference> = emptyMap()
 
     var searchQuery: String by mutableStateOf("")
-    var showUser: Boolean by mutableStateOf(true)
-    var showDedicated: Boolean by mutableStateOf(true)
-    var showPve: Boolean by mutableStateOf(true)
-    var showPvp: Boolean by mutableStateOf(true)
-    var showModdedOnly: Boolean by mutableStateOf(false)
-    var showFavoritesOnly: Boolean by mutableStateOf(false)
+    var showUser: Boolean by mutableStateOf(false)
+    var showDedicated: Boolean by mutableStateOf(false)
+    var showPve: Boolean by mutableStateOf(false)
+    var showPvp: Boolean by mutableStateOf(false)
+    var showModded: Boolean by mutableStateOf(false)
+    var showVanilla: Boolean by mutableStateOf(false)
+    var showFavorites: Boolean by mutableStateOf(false)
     var sortBy: SortType by mutableStateOf(SortType.PING)
 
     fun load() {

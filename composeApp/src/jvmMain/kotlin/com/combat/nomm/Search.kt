@@ -201,6 +201,29 @@ fun rememberFilteredExtensions(
 }
 
 
+fun List<ServerEntry>.applyServerFilters(
+    showFavorites: Boolean,
+    showModded: Boolean,
+    showVanilla: Boolean,
+    showUser: Boolean,
+    showDedicated: Boolean,
+    showPve: Boolean,
+    showPvp: Boolean,
+): List<ServerEntry> {
+    val anyActive =
+        showFavorites || showModded || showVanilla || showUser || showDedicated || showPve || showPvp
+    if (!anyActive) return this
+    return filter {
+        (showFavorites && it.isFavorite)
+                || (showModded && it.modlist != null)
+                || (showVanilla && it.modlist == null)
+                || (showUser && it.isLobby)
+                || (showDedicated && !it.isLobby)
+                || (showPvp && it.missionData?.pvpType == "1")
+                || (showPve && it.missionData?.pvpType == "2")
+    }
+}
+
 @Composable
 fun rememberFilteredServers(
     allServers: List<ServerEntry>,
@@ -209,8 +232,9 @@ fun rememberFilteredServers(
     showDedicated: Boolean,
     showPve: Boolean,
     showPvp: Boolean,
-    showModdedOnly: Boolean,
-    showFavoritesOnly: Boolean,
+    showModded: Boolean,
+    showVanilla: Boolean,
+    showFavorites: Boolean,
     sortBy: SortType
 ): List<ServerEntry> {
     return rememberFilteredList(
@@ -220,28 +244,28 @@ fun rememberFilteredServers(
         showDedicated,
         showPve,
         showPvp,
-        showModdedOnly,
-        showFavoritesOnly,
+        showModded,
+        showVanilla,
+        showFavorites,
         sortBy,
         onBlankQuery = { items ->
-            var servers = items.filter {
-                ((it.isLobby && showUser) || (!it.isLobby && showDedicated))
-                        && ((it.missionData?.pvpType == "1" && showPvp) || (it.missionData?.pvpType == "2" && showPve))
-                        && (!showModdedOnly || it.modlist != null)
+            val servers = items.applyServerFilters(
+                showFavorites = showFavorites,
+                showModded = showModded,
+                showVanilla = showVanilla,
+                showUser = showUser,
+                showDedicated = showDedicated,
+                showPve = showPve,
+                showPvp = showPvp,
+            )
 
-            }
-
-            if (showFavoritesOnly) {
-                servers = servers.filter { it.isFavorite }
-            }
-
-            servers = when (sortBy) {
+            val sorted = when (sortBy) {
                 SortType.PING -> servers.sortedBy { it.info?.ping }
                 SortType.PLAYERS -> servers.sortedByDescending { it.info?.players }
                 SortType.DURATION -> servers.sortedByDescending { it.info?.timeLastPlayed }
             }
 
-            servers.sortedByDescending { it.isFavorite }
+            sorted.sortedByDescending { it.isFavorite }
         },
         onFilterQuery = { items, query ->
             items.sortFilterByQuery(query, minSimilarity = 0.3) { entry, q ->

@@ -28,7 +28,7 @@ fun ServerBrowserScreen(
     val serverList by ServerBrowser.servers.collectAsState()
 
     val filteredServers =
-        rememberFilteredServers(serverList, ServerBrowser.searchQuery, ServerBrowser.showUser, ServerBrowser.showDedicated, ServerBrowser.showPve, ServerBrowser.showPvp, ServerBrowser.showModdedOnly, ServerBrowser.showFavoritesOnly, ServerBrowser.sortBy)
+        rememberFilteredServers(serverList, ServerBrowser.searchQuery, ServerBrowser.showUser, ServerBrowser.showDedicated, ServerBrowser.showPve, ServerBrowser.showPvp, ServerBrowser.showModded, ServerBrowser.showVanilla, ServerBrowser.showFavorites, ServerBrowser.sortBy)
 
     LaunchedEffect(Unit) {
         if (ServerBrowser.servers.value.isEmpty()) {
@@ -148,11 +148,11 @@ fun ServerBrowserScreen(
                     DropdownMenuItem(
                         text = { Text("Favorites") },
                         onClick = {
-                            ServerBrowser.showFavoritesOnly = !ServerBrowser.showFavoritesOnly
+                            ServerBrowser.showFavorites = !ServerBrowser.showFavorites
                         },
                         leadingIcon = {
                             Icon(
-                                painterResource(if (ServerBrowser.showFavoritesOnly) Res.drawable.check_box_24px else Res.drawable.check_box_outline_blank_24px),
+                                painterResource(if (ServerBrowser.showFavorites) Res.drawable.check_box_24px else Res.drawable.check_box_outline_blank_24px),
                                 null
                             )
                         },
@@ -162,11 +162,25 @@ fun ServerBrowserScreen(
                     DropdownMenuItem(
                         text = { Text("Modded") },
                         onClick = {
-                            ServerBrowser.showModdedOnly = !ServerBrowser.showModdedOnly
+                            ServerBrowser.showModded = !ServerBrowser.showModded
                         },
                         leadingIcon = {
                             Icon(
-                                painterResource(if (ServerBrowser.showModdedOnly) Res.drawable.check_box_24px else Res.drawable.check_box_outline_blank_24px),
+                                painterResource(if (ServerBrowser.showModded) Res.drawable.check_box_24px else Res.drawable.check_box_outline_blank_24px),
+                                null
+                            )
+                        },
+                        colors = itemColors,
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Vanilla") },
+                        onClick = {
+                            ServerBrowser.showVanilla = !ServerBrowser.showVanilla
+                        },
+                        leadingIcon = {
+                            Icon(
+                                painterResource(if (ServerBrowser.showVanilla) Res.drawable.check_box_24px else Res.drawable.check_box_outline_blank_24px),
                                 null
                             )
                         },
