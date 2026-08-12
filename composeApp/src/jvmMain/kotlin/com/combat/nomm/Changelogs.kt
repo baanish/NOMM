@@ -46,6 +46,11 @@ val changelogs = mutableMapOf(
         Improved in App Changelog to no longer only show latest Changes but all changes that have been added when skipping a Version.
         Added more customization options for NOMM Themes.
     """.trimIndent(),
+    Version(5, 2, 0) to """
+        Added OUTDATED tag to mods that are not built for the latest Game Version.
+        Added Modded tag to servers that are modded!
+        Added Filters to the Discovery menu.
+    """.trimIndent(),
 )
 
 fun changelogsAnnotatedString(): AnnotatedString = buildAnnotatedString {

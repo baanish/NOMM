@@ -68,6 +68,24 @@ fun buildModHashLookup(manifest: Manifest): Map<String, PackageReference> {
     return lookup
 }
 
+const val OUTDATED_TAG = "OUTDATED"
+
+fun Manifest.latestGameVersion(): Version? =
+    asSequence()
+        .flatMap { it.artifacts.asSequence() }
+        .mapNotNull { it.gameVersion?.let(::parseGameVersion) }
+        .maxOrNull()
+
+fun Extension.isOutdated(latestGameVersion: Version?): Boolean {
+    if (latestGameVersion == null) return false
+    val latestArtifact = artifacts.maxByOrNull { it.version } ?: return false
+    val gameVersion = latestArtifact.gameVersion?.let(::parseGameVersion) ?: return false
+    return gameVersion < latestGameVersion
+}
+
+private fun parseGameVersion(value: String): Version? =
+    runCatching { Version.fromString(value) }.getOrNull()
+
 fun fetchFakeManifest(): List<Extension> {
     val latinWords = arrayOf(
         "lorem", "ipsum", "dolor", "sit", "amet", "consectetur", "adipiscing", "elit",
@@ -87,6 +105,8 @@ fun fetchFakeManifest(): List<Extension> {
         val name1 = latinWords[rnd.nextInt(16)]
         val name2 = latinWords[rnd.nextInt(16)]
         val pkgName = "$name1 $name2"
+
+        val modGameVersion = if (rnd.nextBoolean()) "0.34" else "0.33"
 
         val versionCount = rnd.nextInt(10, 30)
         val artifacts = ArrayList<Artifact>(versionCount)
@@ -109,7 +129,7 @@ fun fetchFakeManifest(): List<Extension> {
                 version = Version(1, v, 0),
                 category = "Release",
                 type = "Mod",
-                gameVersion = "0.33",
+                gameVersion = modGameVersion,
                 downloadUrl = "https://cdn.ex.com/$author/$pkgId-$v.zip",
                 hash = fastHash,
                 extends = null,

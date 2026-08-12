@@ -9,26 +9,48 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 import nuclearoptionmodmanager.composeapp.generated.resources.Res
+import nuclearoptionmodmanager.composeapp.generated.resources.check_box_24px
+import nuclearoptionmodmanager.composeapp.generated.resources.check_box_outline_blank_24px
+import nuclearoptionmodmanager.composeapp.generated.resources.filter_alt_24px
 import nuclearoptionmodmanager.composeapp.generated.resources.refresh_24px
 import nuclearoptionmodmanager.composeapp.generated.resources.sync_24px
 import org.jetbrains.compose.resources.painterResource
+
+private val FilterMenuWindowMargin = 64.dp
 
 @Composable
 fun SearchScreen(
     onNavigateToMod: (String) -> Unit,
 ) {
     var searchQuery by remember { mutableStateOf("") }
+    var filterExpanded by remember { mutableStateOf(false) }
+    var selectedTags by remember { mutableStateOf(setOf<String>()) }
     val allMods by RepoMods.mods.collectAsState()
     val isLoading by RepoMods.isLoading.collectAsState()
 
-    val filteredMods = rememberFilteredExtensions(allMods.minus("NOSMR").values.toList(), searchQuery)
+    val sourceMods = remember(allMods) { allMods.minus("NOSMR").values.toList() }
+    val tagFilters = remember(sourceMods) { sourceMods.commonTagFilters() }
+
+    val density = LocalDensity.current
+    val windowHeightPx = with(density) { LocalWindowState.current.size.height.roundToPx() }
+    var filterAnchorBottomPx by remember { mutableStateOf(0) }
+    val filterMenuMaxHeight = with(density) {
+        (windowHeightPx - filterAnchorBottomPx - FilterMenuWindowMargin.roundToPx()).toDp().coerceAtLeast(0.dp)
+    }
+
+    val filteredMods = rememberFilteredExtensions(sourceMods, searchQuery, selectedTags)
 
 
 
@@ -39,6 +61,56 @@ fun SearchScreen(
         onQueryChange = { searchQuery = it },
         placeholder = "Search mods...",
         buttons = {
+            val contentColor = MaterialTheme.colorScheme.onSecondary
+            val itemColors =
+                MenuDefaults.itemColors(textColor = contentColor, leadingIconColor = contentColor, trailingIconColor = contentColor)
+            Box(
+                contentAlignment = Alignment.TopCenter,
+                modifier = Modifier.onGloballyPositioned { coords ->
+                    filterAnchorBottomPx = coords.positionInWindow().y.roundToInt() + coords.size.height
+                }
+            ) {
+                Button(
+                    onClick = { filterExpanded = true },
+                    modifier = Modifier.fillMaxHeight().clip(MaterialTheme.shapes.small).clipToBounds()
+                        .pointerHoverIcon(PointerIcon.Hand),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondary,
+                        contentColor = MaterialTheme.colorScheme.onSecondary,
+                    ),
+                    shape = MaterialTheme.shapes.small,
+                ) {
+                    Icon(
+                        painterResource(Res.drawable.filter_alt_24px), contentDescription = "Filters"
+                    )
+                }
+
+                DropdownMenu(
+                    modifier = Modifier.heightIn(max = filterMenuMaxHeight),
+                    shape = MaterialTheme.shapes.small,
+                    offset = DpOffset(x = 0.dp, y = 4.dp),
+                    containerColor = MaterialTheme.colorScheme.secondary,
+                    expanded = filterExpanded, onDismissRequest = { filterExpanded = false }) {
+                    tagFilters.forEach { filter ->
+                        val isSelected = filter.tag in selectedTags
+                        DropdownMenuItem(
+                            text = { Text("${filter.label} (${filter.count})") },
+                            onClick = {
+                                selectedTags =
+                                    if (isSelected) selectedTags - filter.tag else selectedTags + filter.tag
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    painterResource(if (isSelected) Res.drawable.check_box_24px else Res.drawable.check_box_outline_blank_24px),
+                                    null
+                                )
+                            },
+                            colors = itemColors,
+                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)
+                        )
+                    }
+                }
+            }
             Button(
                 onClick = { RepoMods.fetchManifest() },
                 modifier = Modifier.fillMaxHeight().clip(MaterialTheme.shapes.small).clipToBounds()

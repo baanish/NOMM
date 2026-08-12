@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.style.TextOverflow
@@ -250,20 +251,41 @@ fun ServerDetails(
                     "1" -> MaterialTheme.colorScheme.error
                     else -> MaterialTheme.colorScheme.outline
                 }
-                Surface(
-                    shape = MaterialTheme.shapes.extraSmall,
-                    color = pvpColor.copy(alpha = 0.15f),
-                ) {
-                    Text(
-                        pvpLabel,
-                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = pvpColor,
-                        maxLines = 1,
-                    )
-                }
+                ServerTagChip(
+                    label = pvpLabel,
+                    containerColor = pvpColor.copy(alpha = 0.15f),
+                    contentColor = pvpColor,
+                )
+            }
+            if (entry.modlist != null) {
+                VerticalDivider(modifier = Modifier.fillMaxHeight().padding(vertical = 4.dp))
+                ServerTagChip(
+                    label = "Modded",
+                    containerColor = MaterialTheme.colorScheme.secondary,
+                    contentColor = MaterialTheme.colorScheme.onSecondary,
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun ServerTagChip(
+    label: String,
+    containerColor: Color,
+    contentColor: Color,
+) {
+    Surface(
+        shape = CircleShape,
+        color = containerColor,
+    ) {
+        Text(
+            label,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+            style = MaterialTheme.typography.labelMedium,
+            color = contentColor,
+            maxLines = 1,
+        )
     }
 }
 
@@ -463,7 +485,7 @@ internal fun parseGameMissionData(rules: Map<String, String>): MissionData? {
     )
 }
 
-private fun parseNommRules(rules: Map<String, String>): NommServerData? {
+internal fun parseNommRules(rules: Map<String, String>): NommServerData? {
     val modCount = rules["nomm_c"]?.toIntOrNull() ?: return null
     val version = rules["nomm_v"] ?: return null
 

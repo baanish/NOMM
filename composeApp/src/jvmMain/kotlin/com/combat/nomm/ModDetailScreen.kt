@@ -111,6 +111,12 @@ fun ModDetailScreen(
 
 @Composable
 fun ModDetails(modMeta: ModMeta?, mod: Extension, onTagClick: ((String) -> Unit)? = null) {
+    val latestGameVersion by RepoMods.latestGameVersion.collectAsState()
+    val isOutdated = remember(mod, latestGameVersion) { mod.isOutdated(latestGameVersion) }
+    val latestArtifactGameVersion = remember(mod) {
+        mod.artifacts.maxByOrNull { it.version }?.gameVersion
+    }
+
     Row(
         modifier = Modifier.height(IntrinsicSize.Min),
         verticalAlignment = Alignment.CenterVertically,
@@ -141,7 +147,7 @@ fun ModDetails(modMeta: ModMeta?, mod: Extension, onTagClick: ((String) -> Unit)
             style = MaterialTheme.typography.labelMedium, maxLines = 1
         )
 
-        if (mod.tags.isNotEmpty()) {
+        if (isOutdated || mod.tags.isNotEmpty()) {
             VerticalDivider(modifier = Modifier.fillMaxHeight().padding(vertical = 4.dp))
         }
 
@@ -154,6 +160,38 @@ fun ModDetails(modMeta: ModMeta?, mod: Extension, onTagClick: ((String) -> Unit)
                 modifier = Modifier
                     .horizontalScroll(rememberScrollState(), enabled = false)
             ) {
+                if (isOutdated) {
+                    TooltipBox(
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                            TooltipAnchorPosition.Above
+                        ),
+                        state = rememberTooltipState(),
+                        tooltip = {
+                            PlainTooltip(
+                                containerColor = MaterialTheme.colorScheme.errorContainer,
+                                contentColor = MaterialTheme.colorScheme.onErrorContainer
+                            ) {
+                                Text(
+                                    "Latest release targets game $latestArtifactGameVersion, latest game update is $latestGameVersion.",
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
+                        }
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.error,
+                        ) {
+                            Text(
+                                text = OUTDATED_TAG,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onError,
+                                maxLines = 1
+                            )
+                        }
+                    }
+                }
                 mod.tags.forEach { tag ->
                     if (onTagClick != null) {
                         Card(

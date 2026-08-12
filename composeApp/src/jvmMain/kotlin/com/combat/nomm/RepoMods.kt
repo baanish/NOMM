@@ -17,6 +17,9 @@ object RepoMods {
     val mods: StateFlow<Map<String, Extension>>
         field = MutableStateFlow(emptyMap())
 
+    val latestGameVersion: StateFlow<Version?>
+        field = MutableStateFlow(null)
+
     val isLoading: StateFlow<Boolean>
         field = MutableStateFlow(false)
 
@@ -38,6 +41,7 @@ object RepoMods {
                     NetworkClient.fetchManifest() ?: SettingsManager.cachedManifest.value.manifest
                 }
                 mods.value = fetched.distinctBy { it.id }.associateBy { it.id }
+                latestGameVersion.value = fetched.latestGameVersion()
                 ServerBrowser.modHashLookup = buildModHashLookup(mods.value.map { it.value })
             } finally {
                 isLoading.value = false

@@ -362,6 +362,14 @@ object ServerBrowser {
                 )
             }.sortedWith(serverSortComparator)
         }
+
+        SteamDiscovery.queryLobbyMetadata(dto.lobbyId) { rules ->
+            if (rules == null) return@queryLobbyMetadata
+            val nommData = parseNommRules(rules)
+            if (nommData != null && (nommData.version != "2" || RepoMods.mods.value.isNotEmpty())) {
+                setLobbyModlist(dto.lobbyId, nommData.mods)
+            }
+        }
     }
 
     private fun loadFavoritesOnly() {
@@ -578,6 +586,11 @@ object ServerBrowser {
                 }
             }
         } ?: return
+
+        val nommData = parseNommRules(received)
+        if (nommData != null && (nommData.version != "2" || RepoMods.mods.value.isNotEmpty())) {
+            setModlistFromRules(entry.fav.ip, entry.fav.gamePort, nommData.mods)
+        }
 
         val gameData = parseGameMissionData(received)
         if (gameData == null) return

@@ -121,16 +121,69 @@ fun measureDamerauLevenshtein(source: CharSequence, target: CharSequence, thresh
 }
 
 
+val tagSynonyms = mapOf(
+    "flavour" to "flavor",
+    "weapons" to "weapon",
+)
+
+fun normalizeTag(tag: String): String {
+    val normalized = tag.trim().lowercase()
+    return tagSynonyms[normalized] ?: normalized
+}
+
+data class TagFilter(
+    val tag: String,
+    val label: String,
+    val count: Int,
+)
+
+val excludedTagFilters = setOf("mod")
+
+fun List<Extension>.commonTagFilters(minMods: Int = 2): List<TagFilter> {
+    val modIds = HashMap<String, MutableSet<String>>()
+    val labelCounts = HashMap<String, HashMap<String, Int>>()
+    forEach { ext ->
+        ext.tags.forEach { tag ->
+            val normalized = normalizeTag(tag)
+            if (normalized in excludedTagFilters) return@forEach
+            modIds.getOrPut(normalized) { mutableSetOf() }.add(ext.id)
+            val labels = labelCounts.getOrPut(normalized) { hashMapOf() }
+            labels[tag] = (labels[tag] ?: 0) + 1
+        }
+    }
+    return modIds.entries
+        .map { (normalized, ids) ->
+            TagFilter(
+                tag = normalized,
+                label = (labelCounts.getValue(normalized).maxByOrNull { it.value }?.key ?: normalized)
+                    .replaceFirstChar { it.uppercaseChar() },
+                count = ids.size
+            )
+        }
+        .filter { it.count >= minMods }
+        .sortedByDescending { it.count }
+}
+
+fun List<Extension>.filterByTags(selectedTags: Set<String>): List<Extension> {
+    if (selectedTags.isEmpty()) return this
+    return filter { ext -> ext.tags.any { normalizeTag(it) in selectedTags } }
+}
+
 @Composable
-fun rememberFilteredExtensions(allMods: List<Extension>, searchQuery: String): List<Extension> {
+fun rememberFilteredExtensions(
+    allMods: List<Extension>,
+    searchQuery: String,
+    selectedTags: Set<String> = emptySet(),
+): List<Extension> {
     return rememberFilteredList(
         allItems = allMods,
         searchQuery = searchQuery,
+        selectedTags,
         onBlankQuery = { items ->
-            items.sortedByDescending { it.downloadCount }
+            items.filterByTags(selectedTags).sortedByDescending { it.downloadCount }
         },
         onFilterQuery = { items, query ->
-            items.sortFilterByQuery(query, minSimilarity = 0.3) { ext, q ->
+            items.filterByTags(selectedTags).sortFilterByQuery(query, minSimilarity = 0.3) { ext, q ->
                 val nameScore = fuzzyPowerScore(q, ext.displayName)
                 val idScore = fuzzyPowerScore(q, ext.id)
                 val tagScore = ext.tags.maxOfOrNull { fuzzyPowerScore(q, it) } ?: 0.0
