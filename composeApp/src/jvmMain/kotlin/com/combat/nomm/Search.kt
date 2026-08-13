@@ -136,10 +136,13 @@ data class TagFilter(
     val label: String,
 )
 
+val excludedTagFilters = setOf("mod")
+
 fun List<Extension>.commonTagFilters()=
     this.fold(mutableMapOf<String, MutableMap<String, Int>>()) { tagFilters, ext ->
 
         ext.tags.forEach { tag ->
+            if (normalizeTag(tag) in excludedTagFilters) return@forEach
             val synonyms = tagFilters.getOrPut(normalizeTag(tag)) {
                 mutableMapOf()
             }
@@ -152,7 +155,7 @@ fun List<Extension>.commonTagFilters()=
     }.toList().sortedByDescending { (_, synonyms) -> 
         synonyms.values.sum()
     }.map { (tag, synonyms) ->
-        TagFilter(tag, synonyms.maxBy { it.value }.key)
+        TagFilter(tag, (synonyms.maxBy { it.value }.key).replaceFirstChar { it.uppercaseChar() })
     }
 
 
