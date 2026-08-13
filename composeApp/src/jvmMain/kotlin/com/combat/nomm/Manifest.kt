@@ -1,5 +1,6 @@
 package com.combat.nomm
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import java.security.MessageDigest
@@ -27,12 +28,15 @@ data class Artifact(
     val category: String? = null,
     val type: String? = null,
     val gameVersion: String? = null,
-    val downloadUrl: String,
+    val downloadUrl: String? = null,
+    @SerialName("downloadURL") val downloadURL: String? = null,
     val hash: String? = null,
     val extends: PackageReference? = null,
     val dependencies: List<PackageReference> = emptyList(),
     val incompatibilities: List<PackageReference> = emptyList()
-)
+) {
+    val resolvedDownloadUrl: String? get() = downloadUrl ?: downloadURL
+}
 
 @Serializable
 data class UrlReference(

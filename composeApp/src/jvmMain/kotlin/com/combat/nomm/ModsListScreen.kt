@@ -39,9 +39,28 @@ fun SearchScreen(
     var selectedTags by remember { mutableStateOf(setOf<String>()) }
     val allMods by RepoMods.mods.collectAsState()
     val isLoading by RepoMods.isLoading.collectAsState()
+    val manifestError by RepoMods.manifestError.collectAsState()
 
     val sourceMods = remember(allMods) { allMods.minus("NOSMR").values.toList() }
     val tagFilters = remember(sourceMods) { sourceMods.commonTagFilters() }
+
+    val showFetchError = allMods.isEmpty() && manifestError != null
+    val emptyContent: (@Composable () -> Unit)? = if (showFetchError) {
+        {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = manifestError ?: "Failed to fetch mod manifest",
+                    style = MaterialTheme.typography.labelLarge,
+                )
+                Button(onClick = { RepoMods.fetchManifest() }) {
+                    Text("Retry")
+                }
+            }
+        }
+    } else null
 
     val density = LocalDensity.current
     val windowHeightPx = with(density) { LocalWindowState.current.size.height.roundToPx() }
@@ -60,6 +79,7 @@ fun SearchScreen(
         query = searchQuery,
         onQueryChange = { searchQuery = it },
         placeholder = "Search mods...",
+        emptyContent = emptyContent,
         buttons = {
             val contentColor = MaterialTheme.colorScheme.onSecondary
             val itemColors =

@@ -52,6 +52,10 @@ val changelogs = mutableMapOf(
         Added Modded filter to server list filters.
         Added Filters to the Discovery menu.
     """.trimIndent(),
+    Version(5, 2, 1) to """
+        Fixed manifest first-time fetch.
+        Fixed Available Updates dialog not showing the updates correctly.
+    """.trimIndent(),
 )
 
 fun changelogsAnnotatedString(): AnnotatedString = buildAnnotatedString {

@@ -682,11 +682,16 @@ fun ArtifactCard(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                    val downloadUrl = artifact.resolvedDownloadUrl
                     Text(
-                        text = buildAnnotatedString {
-                            withLink(LinkAnnotation.Url(artifact.downloadUrl)) {
-                                append(artifact.downloadUrl)
+                        text = if (downloadUrl != null) {
+                            buildAnnotatedString {
+                                withLink(LinkAnnotation.Url(downloadUrl)) {
+                                    append(downloadUrl)
+                                }
                             }
+                        } else {
+                            buildAnnotatedString { append("No download link") }
                         },
                         style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.primary),
                         maxLines = 1,

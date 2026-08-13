@@ -23,6 +23,9 @@ object RepoMods {
     val isLoading: StateFlow<Boolean>
         field = MutableStateFlow(false)
 
+    val manifestError: StateFlow<String?>
+        field = MutableStateFlow(null)
+
     init {
         fetchManifest()
     }
@@ -30,15 +33,29 @@ object RepoMods {
     fun fetchManifest() {
         scope.launch {
             if (!mutex.tryLock()) {
-                println("[NOMM] Manifest fetch already in progress, skipping")
+                Log.log("Manifest fetch already in progress, skipping")
                 return@launch
             }
             try {
                 isLoading.value = true
-                val fetched = if (SettingsManager.config.value.fakeManifest) {
+                val useFakeManifest = SettingsManager.config.value.fakeManifest
+                val networkFetched = if (useFakeManifest) null else NetworkClient.fetchManifest()
+                val fetched = if (networkFetched != null) {
+                    networkFetched
+                } else if (useFakeManifest) {
                     fetchFakeManifest()
                 } else {
-                    NetworkClient.fetchManifest() ?: SettingsManager.cachedManifest.value.manifest
+                    SettingsManager.cachedManifest.value.manifest.also { fallback ->
+                        if (fallback.isEmpty()) {
+                            manifestError.value =
+                                "Failed to fetch mod manifest from ${SettingsManager.config.value.manifestUrl}"
+                        } else {
+                            Log.log("Manifest fetch failed, using cached manifest with ${fallback.size} mods")
+                        }
+                    }
+                }
+                if (networkFetched != null || useFakeManifest) {
+                    manifestError.value = null
                 }
                 mods.value = fetched.distinctBy { it.id }.associateBy { it.id }
                 latestGameVersion.value = fetched.latestGameVersion()
@@ -60,10 +77,10 @@ object RepoMods {
                                 withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
                                     append("${updatable.size}")
                                 }
-                                append("Available Mod Update${if (updatable.size > 1) "s" else ""}")
+                                append(" Available Mod Update${if (updatable.size > 1) "s" else ""}")
                             },
                             buildAnnotatedString {
-                                updatable.joinToString(separator = "\n") { it.displayName }
+                                append(updatable.joinToString(separator = "\n") { it.displayName })
                             },
                             null
                         )
@@ -139,7 +156,16 @@ object RepoMods {
         targetArtifact.dependencies.forEach { installMod(it.id, null, processing) }
         targetArtifact.extends?.let { installMod(it.id, null, processing) }
 
-        installMod(extension.id, targetArtifact.downloadUrl, targetArtifact.hash) { dir ->
+        val downloadUrl = targetArtifact.resolvedDownloadUrl
+        if (downloadUrl == null) {
+            reportNommError(
+                "Cannot install ${extension.displayName}",
+                "This version has no download link in the manifest."
+            )
+            return
+        }
+
+        installMod(extension.id, downloadUrl, targetArtifact.hash) { dir ->
             val metaData = ModMeta(
                 id = id,
                 artifact = targetArtifact,

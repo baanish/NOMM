@@ -64,24 +64,39 @@ object NetworkClient {
             val version = if (versionResponse.status.isSuccess()) {
                 json.decodeFromString<Version>(versionResponse.bodyAsText())
             } else return@runCatching null
-            if (SettingsManager.cachedManifest.value.version == version && !SettingsManager.config.value.ignoreManifestVersion) {
-                return@runCatching null
+
+            val cached = SettingsManager.cachedManifest.value
+            if (shouldSkipManifestFetch(
+                    cached.version,
+                    version,
+                    cached.manifest.isNotEmpty(),
+                    SettingsManager.config.value.ignoreManifestVersion
+                )
+            ) {
+                return@runCatching cached.manifest
             }
-            SettingsManager.updateCachedManifest(SettingsManager.cachedManifest.value.copy(version = version))
+
             val manifestResponse = client.get(SettingsManager.config.value.manifestUrl)
             if (manifestResponse.status.isSuccess()) {
                 val manifest = json.decodeFromString<Manifest>(manifestResponse.body()).distinctBy { it.id }
-                SettingsManager.updateCachedManifest(SettingsManager.cachedManifest.value.copy(manifest = manifest))
+                SettingsManager.updateCachedManifest(cached.copy(version = version, manifest = manifest))
                 manifest
             } else {
                 null
             }
         }.getOrElse { e ->
-            println("[NOMM] Failed to fetch manifest: ${e.message}")
+            Log.log("Failed to fetch manifest: ${e.message}")
             null
         }
     }
 }
+
+fun shouldSkipManifestFetch(
+    cachedVersion: Version,
+    remoteVersion: Version,
+    cachedManifestNonEmpty: Boolean,
+    ignoreManifestVersion: Boolean
+): Boolean = !ignoreManifestVersion && cachedVersion == remoteVersion && cachedManifestNonEmpty
 
 @Serializable
 data class GitHubRelease(

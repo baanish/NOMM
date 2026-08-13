@@ -29,6 +29,7 @@ fun <T> ListScreen(
     onQueryChange: (String) -> Unit,
     placeholder: String = "Search mods...",
     emptyMessage: String = "Nothing here. huh",
+    emptyContent: (@Composable () -> Unit)? = null,
     buttons: @Composable (RowScope.() -> Unit),
     items: List<T>,
     key: ((T) -> Any)? = null,
@@ -66,14 +67,18 @@ fun <T> ListScreen(
 
             if (items.isEmpty()) {
                 item {
-                    SelectionContainer {
-                        Text(
-                            emptyMessage,
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            style = MaterialTheme.typography.labelLarge,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                    if (emptyContent != null) {
+                        emptyContent()
+                    } else {
+                        SelectionContainer {
+                            Text(
+                                emptyMessage,
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                style = MaterialTheme.typography.labelLarge,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
             } else {
