@@ -134,39 +134,31 @@ fun normalizeTag(tag: String): String {
 data class TagFilter(
     val tag: String,
     val label: String,
-    val count: Int,
 )
 
-val excludedTagFilters = setOf("mod")
+fun List<Extension>.commonTagFilters()=
+    this.fold(mutableMapOf<String, MutableMap<String, Int>>()) { tagFilters, ext ->
 
-fun List<Extension>.commonTagFilters(minMods: Int = 2): List<TagFilter> {
-    val modIds = HashMap<String, MutableSet<String>>()
-    val labelCounts = HashMap<String, HashMap<String, Int>>()
-    forEach { ext ->
         ext.tags.forEach { tag ->
-            val normalized = normalizeTag(tag)
-            if (normalized in excludedTagFilters) return@forEach
-            modIds.getOrPut(normalized) { mutableSetOf() }.add(ext.id)
-            val labels = labelCounts.getOrPut(normalized) { hashMapOf() }
-            labels[tag] = (labels[tag] ?: 0) + 1
+            val synonyms = tagFilters.getOrPut(normalizeTag(tag)) {
+                mutableMapOf()
+            }
+            val synonymCount = synonyms.getOrDefault(tag, 0)
+            synonyms[tag] = synonymCount + 1
+
+
         }
+        tagFilters
+    }.toList().sortedByDescending { (_, synonyms) -> 
+        synonyms.values.sum()
+    }.map { (tag, synonyms) ->
+        TagFilter(tag, synonyms.maxBy { it.value }.key)
     }
-    return modIds.entries
-        .map { (normalized, ids) ->
-            TagFilter(
-                tag = normalized,
-                label = (labelCounts.getValue(normalized).maxByOrNull { it.value }?.key ?: normalized)
-                    .replaceFirstChar { it.uppercaseChar() },
-                count = ids.size
-            )
-        }
-        .filter { it.count >= minMods }
-        .sortedByDescending { it.count }
-}
+
 
 fun List<Extension>.filterByTags(selectedTags: Set<String>): List<Extension> {
     if (selectedTags.isEmpty()) return this
-    return filter { ext -> ext.tags.any { normalizeTag(it) in selectedTags } }
+    return filter { ext -> selectedTags.all { tag -> tag in ext.tags.map { normalizeTag(it) } } }
 }
 
 @Composable

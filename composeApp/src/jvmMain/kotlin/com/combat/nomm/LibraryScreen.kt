@@ -18,15 +18,14 @@ import org.jetbrains.compose.resources.painterResource
 fun LibraryScreen(
     onOpenMod: (String) -> Unit,
 ) {
-    var searchQuery by remember { mutableStateOf("") }
     val localMods by LocalMods.mods.collectAsState()
     val repoMods by RepoMods.mods.collectAsState()
-    val cachedManifest = SettingsManager.cachedManifest.value
+    val cachedManifest by SettingsManager.cachedManifest
 
     var menuExpanded by remember { mutableStateOf(false) }
 
-    val installedExtensions = remember(localMods, repoMods, cachedManifest) {
-        localMods.values.map { modMeta ->
+    val sourceMods = remember(localMods, repoMods, cachedManifest) {
+        localMods.values.filter { it.id != "NOSMR" }.map { modMeta ->
             repoMods[modMeta.id]
                 ?: cachedManifest.manifest.find { it.id == modMeta.id } ?: Extension(
                     id = modMeta.id,
@@ -40,18 +39,20 @@ fun LibraryScreen(
         }
     }
 
-    val filteredMods = rememberFilteredExtensions(installedExtensions.filter { it.id != "NOSMR" }, searchQuery)
+    val filteredMods = rememberFilteredExtensions(sourceMods, ModsSearch.query, ModsSearch.selectedFilterTags)
 
-
+    
 
     ListScreen(
         items = filteredMods,
         key = { it.id },
-        query = searchQuery,
-        onQueryChange = { searchQuery = it },
+        query = ModsSearch.query,
+        onQueryChange = { ModsSearch.query = it },
         placeholder = "Search mods...",
         emptyMessage = "Nothing here. huh",
         buttons = {
+
+            TagFilterDropdownMenu(filteredMods)
             Box(contentAlignment = Alignment.TopCenter) {
                 Button(
                     onClick = { menuExpanded = true },
@@ -179,6 +180,6 @@ fun LibraryScreen(
             }
         }
     ) { ext ->
-        ModItem(mod = ext, onTagClick = { searchQuery = it }, onClick = { onOpenMod(ext.id) })
+        ModItem(mod = ext, onClick = { onOpenMod(ext.id) })
     }
 }

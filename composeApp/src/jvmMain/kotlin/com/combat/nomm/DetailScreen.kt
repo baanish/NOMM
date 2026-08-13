@@ -19,7 +19,6 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavEntry
@@ -38,7 +37,7 @@ fun DetailScreen(
     title: String,
     subtitle: String,
     details: @Composable () -> Unit,
-    buttons: @Composable (controlSize: Dp, iconSize: Dp) -> Unit,
+    buttons: @Composable () -> Unit,
     onBack: () -> Unit,
     content: @Composable (NavBackStack<NavKey>) -> ((NavKey) -> NavEntry<NavKey>)
 ) {
@@ -74,7 +73,7 @@ fun DetailScreenTitleCard(
     title: String,
     subtitle: String,
     details: @Composable () -> Unit,
-    buttons: @Composable (controlSize: Dp, iconSize: Dp) -> Unit,
+    buttons: @Composable () -> Unit,
     onBack: () -> Unit
 ) {
 
@@ -114,9 +113,9 @@ fun DetailScreenTitleCard(
 
 
             val controlSize = 40.dp
-            val iconSize = 28.dp
+            val iconSize = 24.dp
 
-            buttons(controlSize, iconSize)
+            buttons()
 
             IconButton(
                 onClick = onBack, colors = IconButtonDefaults.iconButtonColors(

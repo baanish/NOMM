@@ -302,7 +302,7 @@ object LocalMods {
                     runCatching { json.decodeFromString<ModMeta>(metaJson.readText()) }.getOrNull()
                 } else null
 
-                val id = meta?.id ?: file.nameWithoutExtension
+                val id = meta?.id ?: file.name
                 val existing = foundMods[id]
 
                 if (existing != null) {

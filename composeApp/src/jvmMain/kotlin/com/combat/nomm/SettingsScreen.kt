@@ -180,8 +180,8 @@ fun SettingsScreen() {
                     label = "Fake Manifest",
                     subLabel = "Generates Fake Manifest Data useful to test the UI better.",
                     checked = currentConfig.fakeManifest,
-                    onCheckedChange = { newHSV ->
-                        SettingsManager.updateConfig(currentConfig.copy(fakeManifest = newHSV))
+                    onCheckedChange = { newValue ->
+                        SettingsManager.updateConfig(currentConfig.copy(fakeManifest = newValue))
                         RepoMods.fetchManifest()
                     }
                 )

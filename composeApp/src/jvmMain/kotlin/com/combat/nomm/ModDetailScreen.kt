@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -82,12 +83,12 @@ fun ModDetailScreen(
         details = {
             ModDetails(modMeta, mod)
         },
-        buttons = { controlSize: Dp, iconSize: Dp ->
+        buttons = {
             val installStatuses by Installer.installStatuses.collectAsState()
             val installedMods by LocalMods.mods.collectAsState()
             val taskState = installStatuses[mod.id]
             val modMeta = installedMods[mod.id]
-            ModActions(taskState, modMeta, mod, controlSize, iconSize)
+            ModActions(taskState, modMeta, mod)
         },
         onBack = onBack,
         content = {
@@ -110,7 +111,7 @@ fun ModDetailScreen(
 }
 
 @Composable
-fun ModDetails(modMeta: ModMeta?, mod: Extension, onTagClick: ((String) -> Unit)? = null) {
+fun ModDetails(modMeta: ModMeta?, mod: Extension) {
     val latestGameVersion by RepoMods.latestGameVersion.collectAsState()
     val isOutdated = remember(mod, latestGameVersion) { mod.isOutdated(latestGameVersion) }
     val latestArtifactGameVersion = remember(mod) {
@@ -122,51 +123,50 @@ fun ModDetails(modMeta: ModMeta?, mod: Extension, onTagClick: ((String) -> Unit)
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        when {
-            modMeta == null || !modMeta.isUnidentified -> {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    Icon(painterResource(Res.drawable.download_24px), null, Modifier.size(24.dp))
-                    Text(
-                        mod.downloadCount.toString(),
-                        style = MaterialTheme.typography.labelLargeEmphasized,
-                        maxLines = 1
-                    )
-                }
+        val modOnManifest = modMeta == null || !modMeta.isUnidentified
+        if (modOnManifest) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Icon(painterResource(Res.drawable.download_24px), null, Modifier.size(24.dp))
+                Text(
+                    mod.downloadCount.toString(),
+                    style = MaterialTheme.typography.labelLargeEmphasized,
+                    maxLines = 1
+                )
             }
-
-            else -> {
-                Icon(painterResource(Res.drawable.computer_24px), null, Modifier.size(24.dp))
+        } else {
+            Icon(painterResource(Res.drawable.computer_24px), null, Modifier.size(24.dp))
+        }
+        modMeta?.isUnidentified?.let {
+            if (!it) {
+                VerticalDivider(modifier = Modifier.fillMaxHeight().padding(vertical = 4.dp))
+                Text(
+                    mod.id,
+                    style = MaterialTheme.typography.labelMedium, maxLines = 1
+                )
             }
         }
-        VerticalDivider(modifier = Modifier.fillMaxHeight().padding(vertical = 4.dp))
-        Text(
-            if (modMeta?.isUnidentified ?: false) modMeta.file!!.name else mod.id,
-            style = MaterialTheme.typography.labelMedium, maxLines = 1
-        )
 
-        if (isOutdated || mod.tags.isNotEmpty()) {
+        if (isOutdated || mod.tags.isNotEmpty() || !modOnManifest) {
             VerticalDivider(modifier = Modifier.fillMaxHeight().padding(vertical = 4.dp))
         }
 
-        CompositionLocalProvider(
-            LocalMinimumInteractiveComponentSize provides Dp.Unspecified,
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
+                .horizontalScroll(rememberScrollState(), enabled = false)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier
-                    .horizontalScroll(rememberScrollState(), enabled = false)
-            ) {
-                if (isOutdated) {
-                    TooltipBox(
-                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-                            TooltipAnchorPosition.Above
-                        ),
-                        state = rememberTooltipState(),
-                        tooltip = {
+            if (isOutdated) {
+                TooltipBox(
+                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                        TooltipAnchorPosition.Above
+                    ),
+                    state = rememberTooltipState(),
+                    tooltip = {
+                        DisableSelection {
                             PlainTooltip(
                                 containerColor = MaterialTheme.colorScheme.errorContainer,
                                 contentColor = MaterialTheme.colorScheme.onErrorContainer
@@ -177,57 +177,58 @@ fun ModDetails(modMeta: ModMeta?, mod: Extension, onTagClick: ((String) -> Unit)
                                 )
                             }
                         }
-                    ) {
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.error,
-                        ) {
-                            Text(
-                                text = OUTDATED_TAG,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onError,
-                                maxLines = 1
-                            )
-                        }
                     }
-                }
-                mod.tags.forEach { tag ->
-                    if (onTagClick != null) {
-                        Card(
-                            onClick = {
-                                onTagClick.invoke(tag)
-                            },
-                            modifier = Modifier.height(IntrinsicSize.Min).semantics { role = Role.Button },
-                            shape = CircleShape,
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                contentColor = MaterialTheme.colorScheme.surfaceVariant
-                            ),
-                        ) {
-                            Text(
-                                text = tag,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                style = MaterialTheme.typography.labelMedium,
-                                maxLines = 1
-                            )
-                        }
-                    } else {
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        ) {
-                            Text(
-                                text = tag,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                maxLines = 1
-                            )
-                        }
-                    }
+                ) {
+                    TagChip(OUTDATED_TAG, MaterialTheme.colorScheme.onError, MaterialTheme.colorScheme.error)
                 }
             }
+            if (!modOnManifest) {
+                TagChip(
+                    "Local",
+                    containerColor = MaterialTheme.colorScheme.onTertiary,
+                    contentColor = MaterialTheme.colorScheme.tertiary,
+                )
+            }
+            mod.tags.forEach { tag ->
+                TagChip(tag) {
+                    ModsSearch.selectedFilterTags += normalizeTag(tag)
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+fun TagChip(
+    tag: String,
+    containerColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    contentColor: Color = MaterialTheme.colorScheme.surfaceVariant,
+    onTagClick: ((String) -> Unit)? = null
+) {
+    CompositionLocalProvider(
+        LocalMinimumInteractiveComponentSize provides Dp.Unspecified,
+    ) {
+        Card(
+            onClick = {
+                onTagClick?.invoke(tag)
+            },
+            enabled = onTagClick != null,
+            modifier = Modifier.height(IntrinsicSize.Min).semantics { role = Role.Button },
+            shape = CircleShape,
+            colors = CardDefaults.cardColors(
+                containerColor,
+                contentColor,
+                containerColor,
+                contentColor,
+            ),
+        ) {
+            Text(
+                text = tag,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                style = MaterialTheme.typography.labelMedium,
+                maxLines = 1
+            )
         }
     }
 }
@@ -458,14 +459,14 @@ fun ModActions(
                         if (isEnabled) modMeta.enable() else modMeta.disable()
                     },
                     modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    colors = if(error) SwitchDefaults.colors(
+                    colors = if (error) SwitchDefaults.colors(
                         checkedThumbColor = MaterialTheme.colorScheme.onError,
                         checkedTrackColor = MaterialTheme.colorScheme.error,
 
                         uncheckedThumbColor = MaterialTheme.colorScheme.onErrorContainer,
                         uncheckedTrackColor = Color.Transparent,
                         uncheckedBorderColor = MaterialTheme.colorScheme.onErrorContainer
-                    ) else SwitchDefaults.colors() 
+                    ) else SwitchDefaults.colors()
                 )
             }
 

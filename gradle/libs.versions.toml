@@ -5,7 +5,7 @@ kotlin = "2.4.0"
 kotlinx-coroutines = "1.11.0"
 ktor = "3.5.0"
 material3 = "1.11.0-alpha07"
-nucleus = "2.3.2"
+nucleus = "2.4.3"
 
 kotlinx-serialization = "1.11.0"
 kotlinx-datetime = "0.8.0"
@@ -17,9 +17,6 @@ materialKolor = "5.0.0-alpha07"
 steamworks4j = "1.10.0"
 
 multiplatform-nav3-ui = "1.1.1"
-foundationDesktop = "1.7.0"
-uiUnitDesktop = "1.7.0"
-foundationDesktopVersion = "1.7.0"
 
 [libraries]
 compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "composeMultiplatform" }
@@ -70,8 +67,6 @@ nucleus-energy = { group = "dev.nucleusframework", name = "nucleus.energy-manage
 nucleus-notif-win = { group = "dev.nucleusframework", name = "nucleus.notification-windows", version.ref = "nucleus" }
 nucleus-notif-mac = { group = "dev.nucleusframework", name = "nucleus.notification-macos", version.ref = "nucleus" }
 nucleus-notif-linux = { group = "dev.nucleusframework", name = "nucleus.notification-linux", version.ref = "nucleus" }
-ui-unit-desktop = { group = "androidx.compose.ui", name = "ui-unit-desktop", version.ref = "uiUnitDesktop" }
-foundation-desktop = { group = "androidx.compose.foundation", name = "foundation-desktop", version.ref = "foundationDesktopVersion" }
 
 [plugins]
 composeHotReload = { id = "org.jetbrains.compose.hot-reload", version.ref = "composeHotReload" }

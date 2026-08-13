@@ -40,24 +40,24 @@ object RepoMods {
                 isLoading.value = true
                 val useFakeManifest = SettingsManager.config.value.fakeManifest
                 val networkFetched = if (useFakeManifest) null else NetworkClient.fetchManifest()
-                val fetched = if (networkFetched != null) {
-                    networkFetched
-                } else if (useFakeManifest) {
-                    fetchFakeManifest()
-                } else {
-                    SettingsManager.cachedManifest.value.manifest.also { fallback ->
-                        if (fallback.isEmpty()) {
-                            manifestError.value =
-                                "Failed to fetch mod manifest from ${SettingsManager.config.value.manifestUrl}"
-                        } else {
-                            Log.log("Manifest fetch failed, using cached manifest with ${fallback.size} mods")
+                val fetched = networkFetched ?: if (useFakeManifest) {
+                        fetchFakeManifest()
+                    } else {
+                        SettingsManager.cachedManifest.value.manifest.also { fallback ->
+                            if (fallback.isEmpty()) {
+                                manifestError.value =
+                                    "Failed to fetch mod manifest from ${SettingsManager.config.value.manifestUrl}"
+                            } else {
+                                Log.log("Manifest fetch failed, using cached manifest with ${fallback.size} mods")
+                            }
                         }
                     }
-                }
                 if (networkFetched != null || useFakeManifest) {
                     manifestError.value = null
                 }
-                mods.value = fetched.distinctBy { it.id }.associateBy { it.id }
+                val distinctMods = fetched.distinctBy { it.id }.associateBy { it.id }
+                ModsSearch.filterTags = distinctMods.map { it.value }.commonTagFilters()
+                mods.value = distinctMods
                 latestGameVersion.value = fetched.latestGameVersion()
                 ServerBrowser.modHashLookup = buildModHashLookup(mods.value.map { it.value })
             } finally {

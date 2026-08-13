@@ -97,7 +97,7 @@ fun fetchFakeManifest(): List<Extension> {
     )
 
     val rnd = ThreadLocalRandom.current()
-    val modCount = rnd.nextInt(1000, 3000)
+    val modCount = rnd.nextInt(10000, 30000)
 
     val manifest = ArrayList<Extension>(modCount)
     val allIds = Array(modCount) { i -> "pkg_$i" }

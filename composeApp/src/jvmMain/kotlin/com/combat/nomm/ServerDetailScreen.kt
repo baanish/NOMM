@@ -13,7 +13,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.style.TextOverflow
@@ -150,8 +149,8 @@ fun ServerDetailScreen(
         details = {
             ServerDetails(entry, missionData)
         },
-        buttons = { controlSize, iconSize ->
-            ServerActions(entry, isInstalling, controlSize, iconSize)
+        buttons = {
+            ServerActions(entry, isInstalling)
         },
         onBack = onBack,
         content = {
@@ -246,57 +245,47 @@ fun ServerDetails(
                     "2" -> "PvE"
                     else -> "All"
                 }
-                val pvpColor = when (pvpType) {
-                    "2" -> MaterialTheme.colorScheme.tertiary
-                    "1" -> MaterialTheme.colorScheme.error
-                    else -> MaterialTheme.colorScheme.outline
+                if (entry.modlist != null) {
+                    TagChip(
+                        "Modded",
+                        containerColor = MaterialTheme.colorScheme.onTertiary,
+                        contentColor = MaterialTheme.colorScheme.tertiary,
+                    )
+                    {
+                        ServerBrowser.showModded = true
+                    }
                 }
-                ServerTagChip(
-                    label = pvpLabel,
-                    containerColor = pvpColor.copy(alpha = 0.15f),
-                    contentColor = pvpColor,
+
+                TagChip(
+                    pvpLabel,
+                    containerColor = MaterialTheme.colorScheme.onTertiary,
+                    contentColor = MaterialTheme.colorScheme.tertiary,
                 )
-            }
-            if (entry.modlist != null) {
-                VerticalDivider(modifier = Modifier.fillMaxHeight().padding(vertical = 4.dp))
-                ServerTagChip(
-                    label = "Modded",
-                    containerColor = MaterialTheme.colorScheme.secondary,
-                    contentColor = MaterialTheme.colorScheme.onSecondary,
-                )
+                {
+                    when (pvpType) {
+                        "PvP"-> {
+                            ServerBrowser.showPvp = true
+                        }
+                        "PvE" -> {
+                            ServerBrowser.showPvp = true
+                        }
+                        "All" -> return@TagChip
+                    }
+                }
             }
         }
     }
 }
 
-@Composable
-private fun ServerTagChip(
-    label: String,
-    containerColor: Color,
-    contentColor: Color,
-) {
-    Surface(
-        shape = CircleShape,
-        color = containerColor,
-    ) {
-        Text(
-            label,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-            style = MaterialTheme.typography.labelMedium,
-            color = contentColor,
-            maxLines = 1,
-        )
-    }
-}
 
 
 @Composable
 fun ServerActions(
     entry: ServerEntry,
     isInstalling: Boolean,
-    controlSize: Dp = 40.dp,
-    iconSize: Dp = 24.dp,
 ) {
+    val controlSize: Dp = 40.dp
+    val iconSize: Dp = 24.dp
     val windowState = LocalWindowState.current
     Row(
         verticalAlignment = Alignment.CenterVertically,

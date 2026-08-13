@@ -28,7 +28,6 @@ class TagFilterTest {
         )
         val filters = mods.commonTagFilters()
         assertEquals(listOf("qol"), filters.map { it.tag })
-        assertEquals(2, filters.single().count)
         assertEquals("Qol", filters.single().label)
     }
 
@@ -51,7 +50,6 @@ class TagFilterTest {
         val filters = mods.commonTagFilters()
         assertEquals(1, filters.size)
         assertEquals("qol", filters.single().tag)
-        assertEquals(2, filters.single().count)
     }
 
     @Test
@@ -64,7 +62,6 @@ class TagFilterTest {
         )
         val filters = mods.commonTagFilters()
         assertEquals(listOf("flavor", "weapon"), filters.map { it.tag }.sorted())
-        filters.forEach { assertEquals(2, it.count) }
     }
 
     @Test
@@ -77,8 +74,6 @@ class TagFilterTest {
         val filters = mods.commonTagFilters()
         assertEquals(listOf("aircraft", "qol"), filters.map { it.tag })
         assertEquals("Aircraft", filters.first().label)
-        assertEquals(3, filters.first().count)
-        assertEquals(2, filters.last().count)
     }
 
     @Test
