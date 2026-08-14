@@ -55,6 +55,11 @@ val changelogs = mutableMapOf(
         Fixed manifest first-time fetch.
         Fixed Available Updates dialog not showing the updates correctly.
     """.trimIndent(),
+    Version(5, 3, 0) to """
+        Added Preview Images for Mods that provide them.
+        Added Client and Server Mod tags for Mods that provide them.
+        Added a Count Badge to show how many Tag Filters are selected.
+    """.trimIndent(),
 )
 
 fun changelogsAnnotatedString(): AnnotatedString = buildAnnotatedString {

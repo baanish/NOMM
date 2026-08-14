@@ -15,7 +15,7 @@ plugins {
     alias(libs.plugins.buildkonfig)
 }
 
-val appVersion = "5.2.0"
+val appVersion = "5.3.0"
 
 
 java {

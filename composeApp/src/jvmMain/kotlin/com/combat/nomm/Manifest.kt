@@ -18,8 +18,21 @@ data class Extension(
     val authors: List<String> = emptyList(),
     val artifacts: List<Artifact>,
     val downloadCount: Int? = null,
+    val imageUrl: String? = null,
+    val imageHash: String? = null,
+    val isClientOrServer: ModType? = null,
     @Transient val real: Boolean = true
 )
+
+@Serializable
+enum class ModType {
+    @SerialName("Both")
+    BOTH,
+    @SerialName("Server")
+    SERVER,
+    @SerialName("Client")
+    CLIENT;
+}
 
 @Serializable
 data class Artifact(

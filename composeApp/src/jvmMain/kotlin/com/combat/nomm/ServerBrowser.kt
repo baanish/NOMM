@@ -594,8 +594,7 @@ object ServerBrowser {
             setModlistFromRules(entry.fav.ip, entry.fav.gamePort, nommData.mods)
         }
 
-        val gameData = parseGameMissionData(received)
-        if (gameData == null) return
+        val gameData = parseGameMissionData(received) ?: return
 
         val enrichedMap = gameData.let { md ->
             listOfNotNull(md.mapName, md.missionName).joinToString(" | ").ifEmpty { null }
@@ -635,7 +634,7 @@ object ServerBrowser {
             val connectJson = if (entry.isLobby) {
                 val lobbyId = entry.fav.gamePort
                 val metadata = withTimeoutOrNull(15.seconds) {
-                    suspendCancellableCoroutine<Map<String, String>?> { cont ->
+                    suspendCancellableCoroutine { cont ->
                         SteamDiscovery.queryLobbyMetadata(lobbyId) { rules ->
                             if (cont.isActive) cont.resumeWith(Result.success(rules))
                         }

@@ -8,9 +8,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.io.bytestring.hexToByteString
 import net.sf.sevenzipjbinding.SevenZip
 import net.sf.sevenzipjbinding.SevenZipException
 import net.sf.sevenzipjbinding.util.ByteArrayStream
+import okio.ByteString.Companion.toByteString
 import java.io.File
 import java.io.FileOutputStream
 import java.nio.file.Files
@@ -49,9 +51,9 @@ object Installer {
 
                     val bytes = downloadWithRetry(modId, url, isBepInEx, cancelAction) { downloadedBytes ->
                         if (hash == null || SettingsManager.config.value.ignoreHashMismatch) true else {
-                            val expected = hash.removePrefix("sha256:").hexToByteArray()
-                            val algorithm = MessageDigest.getInstance("SHA-256")
-                            algorithm.digest(downloadedBytes).contentEquals(expected)
+                            val expected = hash.removePrefix("sha256:").hexToByteArray().toByteString()
+                            
+                            downloadedBytes.toByteString().sha256() == expected
                         }
                     }
 

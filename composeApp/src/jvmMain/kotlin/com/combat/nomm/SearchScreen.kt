@@ -1,5 +1,6 @@
 package com.combat.nomm
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,6 +21,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import nuclearoptionmodmanager.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
 import kotlin.math.roundToInt
@@ -116,6 +118,7 @@ fun TagFilterDropdownMenu(
             filterAnchorBottomPx = coords.positionInWindow().y.roundToInt() + coords.size.height
         }
     ) {
+
         Button(
             onClick = { filterExpanded = true },
             modifier = Modifier
@@ -129,10 +132,27 @@ fun TagFilterDropdownMenu(
             ),
             shape = MaterialTheme.shapes.small,
         ) {
-            Icon(
-                painter = painterResource(Res.drawable.filter_alt_24px),
-                contentDescription = "Filters"
-            )
+            BadgedBox(
+                badge = {
+                    if (ModsSearch.selectedFilterTags.isNotEmpty()) {
+                        Badge(
+                            containerColor = MaterialTheme.colorScheme.onSecondary,
+                            contentColor = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.offset((4).dp, (-4).dp)
+                        ) {
+                            Text(
+                                ModsSearch.selectedFilterTags.size.toString(),
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
+                    }
+                }
+            ) {
+                Icon(
+                    painter = painterResource(Res.drawable.filter_alt_24px),
+                    contentDescription = "Filters"
+                )
+            }
         }
 
         DropdownMenu(
@@ -177,7 +197,11 @@ fun TagFilterDropdownMenu(
                         )
                     },
                     trailingIcon = {
-                        Text(tagCounts[tagFilter.tag].toString(), fontWeight = FontWeight.Bold,textAlign = TextAlign.End)
+                        Text(
+                            tagCounts[tagFilter.tag].toString(),
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.End
+                        )
                     },
                     colors =
                         MenuDefaults.itemColors(
@@ -197,12 +221,14 @@ fun ListScreenItem(
     name: AnnotatedString,
     description: String,
     onClick: () -> Unit,
+    image: (@Composable () -> Unit)? = null,
     details: @Composable () -> Unit,
     actions: @Composable () -> Unit,
 ) {
 
     Card(
-        modifier = Modifier.clip(MaterialTheme.shapes.small).clipToBounds().pointerHoverIcon(PointerIcon.Hand),
+        modifier = Modifier.clip(MaterialTheme.shapes.small).clipToBounds().pointerHoverIcon(PointerIcon.Hand)
+            .height(IntrinsicSize.Min),
         shape = MaterialTheme.shapes.small,
         onClick = onClick,
     ) {
@@ -213,6 +239,7 @@ fun ListScreenItem(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            image?.invoke()
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = name,
@@ -267,6 +294,17 @@ fun ModItem(mod: Extension, onClick: () -> Unit) {
         },
         mod.description,
         onClick = onClick,
+        image = {
+            if (mod.imageUrl != null) {
+                AsyncImage(
+                    mod,
+                    "Preview Image of ${mod.id}",
+                    modifier = Modifier.aspectRatio(1f).fillMaxSize().clip(MaterialTheme.shapes.small).border(
+                        1.dp, MaterialTheme.colorScheme.onSurface,MaterialTheme.shapes.small
+                    )
+                )
+            }
+        },
         details = {
             ModDetails(modMeta, mod)
         },

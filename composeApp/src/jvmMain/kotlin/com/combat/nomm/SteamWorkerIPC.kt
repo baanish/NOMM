@@ -1,7 +1,6 @@
 package com.combat.nomm
 
-import kotlinx.serialization.*
-import kotlinx.serialization.json.*
+import kotlinx.serialization.Serializable
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.ByteBuffer
@@ -182,7 +181,7 @@ class SteamWorkerIPC(private val input: InputStream, private val output: OutputS
     private fun writeFrame(payload: String) {
         val bytes = payload.toByteArray(Charsets.UTF_8)
         val frame = ByteArray(4 + bytes.size)
-        java.nio.ByteBuffer.wrap(frame).putInt(bytes.size).put(bytes)
+        ByteBuffer.wrap(frame).putInt(bytes.size).put(bytes)
         synchronized(writeLock) {
             output.write(frame)
             output.flush()

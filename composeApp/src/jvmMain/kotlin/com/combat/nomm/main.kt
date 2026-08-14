@@ -86,7 +86,8 @@ fun main(args: Array<String>) {
         FileKit.init("NOMM")
         val configuration by SettingsManager.config
 
-
+        SetupCoil(NetworkClient.client)
+        
         val useDarkTheme = when (
             configuration.theme) {
             Theme.DARK -> true

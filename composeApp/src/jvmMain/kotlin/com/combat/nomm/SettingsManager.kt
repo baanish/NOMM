@@ -57,10 +57,7 @@ data class Configuration(
     val neutralVariantColorHSVColor: HSVColor = HSVColor(0.3f, 1f),
     val errorColorHSVColor: HSVColor = HSVColor(0.3f, 1f),
     val placement: WindowPlacement = WindowPlacement.Floating,
-) {
-
-
-}
+)
 
 @OptIn(FlowPreview::class)
 object SettingsManager {

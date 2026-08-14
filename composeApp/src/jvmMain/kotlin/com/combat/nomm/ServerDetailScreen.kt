@@ -68,7 +68,7 @@ fun ServerDetailScreen(
         if (entry.isLobby) {
             val lobbyId = entry.fav.gamePort
             val received = withTimeoutOrNull(15.seconds) {
-                suspendCancellableCoroutine<Map<String, String>?> { cont ->
+                suspendCancellableCoroutine { cont ->
                     SteamDiscovery.queryLobbyMetadata(lobbyId) { rules ->
                         if (cont.isActive) cont.resumeWith(Result.success(rules))
                     }
@@ -90,7 +90,7 @@ fun ServerDetailScreen(
             val maxAttempts = 3
             for (attempt in 1..maxAttempts) {
                 val received = withTimeoutOrNull(15.seconds) {
-                    suspendCancellableCoroutine<Map<String, String>?> { cont ->
+                    suspendCancellableCoroutine { cont ->
                         SteamDiscovery.queryRules(entry.fav.ip, qp) { rules ->
                             if (cont.isActive) cont.resumeWith(Result.success(rules))
                         }
@@ -147,7 +147,7 @@ fun ServerDetailScreen(
                 ?: if (entry.isLobby) "Lobby ${entry.fav.gamePort}" else "${entry.fav.ip}:${entry.fav.gamePort}"
         },
         details = {
-            ServerDetails(entry, missionData)
+            ServerDetails(entry, missionData, true)
         },
         buttons = {
             ServerActions(entry, isInstalling)
@@ -172,6 +172,7 @@ fun ServerDetailScreen(
 fun ServerDetails(
     entry: ServerEntry,
     missionData: MissionData? = null,
+    detailScreen: Boolean = false,
 ) {
     val effectiveMissionData = missionData ?: entry.missionData
 
@@ -249,9 +250,8 @@ fun ServerDetails(
                     TagChip(
                         "Modded",
                         containerColor = MaterialTheme.colorScheme.onTertiary,
-                        contentColor = MaterialTheme.colorScheme.tertiary,
-                    )
-                    {
+                        contentColor = MaterialTheme.colorScheme.tertiary
+                    ) {
                         ServerBrowser.showModded = true
                     }
                 }
@@ -259,19 +259,21 @@ fun ServerDetails(
                 TagChip(
                     pvpLabel,
                     containerColor = MaterialTheme.colorScheme.onTertiary,
-                    contentColor = MaterialTheme.colorScheme.tertiary,
-                )
-                {
+                    contentColor = MaterialTheme.colorScheme.tertiary
+                ) {
                     when (pvpType) {
-                        "PvP"-> {
+                        "PvP" -> {
                             ServerBrowser.showPvp = true
                         }
+
                         "PvE" -> {
                             ServerBrowser.showPvp = true
                         }
+
                         "All" -> return@TagChip
                     }
                 }
+
             }
         }
     }

@@ -29,6 +29,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
+import coil3.compose.AsyncImage
+import com.combat.nomm.ModType.BOTH
+import com.combat.nomm.ModType.CLIENT
+import com.combat.nomm.ModType.SERVER
 import nuclearoptionmodmanager.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
 
@@ -80,8 +84,19 @@ fun ModDetailScreen(
 
             }
         },
+        image = {
+            if (mod.imageUrl != null) {
+                AsyncImage(
+                    mod,
+                    "Preview Image of ${mod.id}",
+                    modifier = Modifier.aspectRatio(1f).fillMaxSize().clip(MaterialTheme.shapes.small).border(
+                        1.dp, MaterialTheme.colorScheme.onSurface,MaterialTheme.shapes.small
+                    )
+                )
+            }
+        },
         details = {
-            ModDetails(modMeta, mod)
+            ModDetails(modMeta, mod,true)
         },
         buttons = {
             val installStatuses by Installer.installStatuses.collectAsState()
@@ -111,7 +126,7 @@ fun ModDetailScreen(
 }
 
 @Composable
-fun ModDetails(modMeta: ModMeta?, mod: Extension) {
+fun ModDetails(modMeta: ModMeta?, mod: Extension,modDetailScreen: Boolean = false) {
     val latestGameVersion by RepoMods.latestGameVersion.collectAsState()
     val isOutdated = remember(mod, latestGameVersion) { mod.isOutdated(latestGameVersion) }
     val latestArtifactGameVersion = remember(mod) {
@@ -189,8 +204,37 @@ fun ModDetails(modMeta: ModMeta?, mod: Extension) {
                     contentColor = MaterialTheme.colorScheme.tertiary,
                 )
             }
+
+            val isClient = when (mod.isClientOrServer) {
+                BOTH -> true
+                SERVER -> false
+                CLIENT -> true
+                null -> false
+            }
+
+            val isServer= when (mod.isClientOrServer) {
+                BOTH -> true
+                SERVER -> true
+                CLIENT -> false
+                null -> false
+            }
+            if (isClient) {
+                TagChip(
+                    "Client",
+                    containerColor = MaterialTheme.colorScheme.onTertiary,
+                    contentColor = MaterialTheme.colorScheme.tertiary,
+                )
+            }
+
+            if (isServer) {
+                TagChip(
+                    "Server",
+                    containerColor = MaterialTheme.colorScheme.onTertiary,
+                    contentColor = MaterialTheme.colorScheme.tertiary,
+                )
+            }
             mod.tags.forEach { tag ->
-                TagChip(tag) {
+                TagChip(tag, enabled = (normalizeTag(tag) != "mod") && modDetailScreen) {
                     ModsSearch.selectedFilterTags += normalizeTag(tag)
                 }
             }
@@ -204,6 +248,7 @@ fun TagChip(
     tag: String,
     containerColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     contentColor: Color = MaterialTheme.colorScheme.surfaceVariant,
+    enabled: Boolean = true,
     onTagClick: ((String) -> Unit)? = null
 ) {
     CompositionLocalProvider(
@@ -211,9 +256,11 @@ fun TagChip(
     ) {
         Card(
             onClick = {
-                onTagClick?.invoke(tag)
+                if (enabled) {
+                    onTagClick?.invoke(tag)
+                }
             },
-            enabled = onTagClick != null,
+            enabled = (onTagClick != null) && enabled,
             modifier = Modifier.height(IntrinsicSize.Min).semantics { role = Role.Button },
             shape = CircleShape,
             colors = CardDefaults.cardColors(
@@ -943,7 +990,10 @@ private fun DependencyItemCard(
         ModActions(taskState, modMeta, mod, 40.dp, 24.dp)
     }
 }
-
+inline fun Modifier.thenIf(
+    condition: Boolean,
+    crossinline modifier: Modifier.() -> Modifier
+): Modifier = if (condition) then(modifier()) else this
 @Composable
 fun DetailListItemCard(
     title: String,
@@ -960,8 +1010,8 @@ fun DetailListItemCard(
         color = if (error) MaterialTheme.colorScheme.errorContainer
         else MaterialTheme.colorScheme.surfaceVariant,
         shape = MaterialTheme.shapes.small,
-        modifier = Modifier.fillMaxWidth().clip(MaterialTheme.shapes.small).clipToBounds()
-            .pointerHoverIcon(PointerIcon.Hand)
+        modifier = Modifier.fillMaxWidth().clip(MaterialTheme.shapes.small).clipToBounds().thenIf(onClick != null
+        ) { this.pointerHoverIcon(PointerIcon.Hand) }
     ) {
         Row(
             modifier = Modifier.height(64.dp).padding(8.dp),

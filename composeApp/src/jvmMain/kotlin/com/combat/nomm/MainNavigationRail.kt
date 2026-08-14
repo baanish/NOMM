@@ -24,6 +24,7 @@ import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 fun MainNavigationRail(
@@ -163,7 +164,7 @@ fun launchNuclearOption(windowState: WindowState) {
             if (SettingsManager.config.value.steamworks) {
                 println("[NOMM] Shutting down Steam worker before launch")
                 SteamDiscovery.shutdown()
-                delay(1500L)
+                delay(1500L.milliseconds)
             }
 
             val steamUri = "steam://rungameid/2168680"
@@ -208,7 +209,7 @@ fun launchNuclearOption(windowState: WindowState) {
                     gameStarted = true
                     break
                 }
-                delay(1000L)
+                delay(1000L.milliseconds)
             }
 
             if (!gameStarted) {
@@ -219,7 +220,7 @@ fun launchNuclearOption(windowState: WindowState) {
 
             println("[NOMM] Game started, waiting for exit...")
             while (SteamDiscovery.isGameRunning()) {
-                delay(5000L)
+                delay(5000L.milliseconds)
             }
             println("[NOMM] Game exited")
         } finally {

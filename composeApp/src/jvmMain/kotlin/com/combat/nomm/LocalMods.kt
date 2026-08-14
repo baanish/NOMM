@@ -349,7 +349,7 @@ object LocalMods {
                 val repoMod = RepoMods.mods.value[meta.id]
                 val artifact = repoMod?.artifacts?.maxByOrNull { it.version }
                 val hasUpdate =
-                    if (artifact == null) false else meta.artifact?.version?.let { it < artifact.version } ?: true
+                    artifact != null && meta.artifact?.version?.let { it < artifact.version } ?: true
 
                 val probs = meta.retrieveProblems()
                 meta.copy(

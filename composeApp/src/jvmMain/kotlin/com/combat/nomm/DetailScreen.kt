@@ -38,6 +38,7 @@ fun DetailScreen(
     subtitle: String,
     details: @Composable () -> Unit,
     buttons: @Composable () -> Unit,
+    image: (@Composable () -> Unit)? = null,
     onBack: () -> Unit,
     content: @Composable (NavBackStack<NavKey>) -> ((NavKey) -> NavEntry<NavKey>)
 ) {
@@ -46,7 +47,7 @@ fun DetailScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
 
-        DetailScreenTitleCard(title, subtitle, details, buttons, onBack)
+        DetailScreenTitleCard(title, subtitle, details, buttons,image ,onBack)
         DetailScreenNavigationBar(
             currentKey,
             backStack,
@@ -74,19 +75,21 @@ fun DetailScreenTitleCard(
     subtitle: String,
     details: @Composable () -> Unit,
     buttons: @Composable () -> Unit,
+    image: (@Composable () -> Unit)? = null,
     onBack: () -> Unit
 ) {
 
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         shape = MaterialTheme.shapes.medium,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            image?.invoke()
             SelectionContainer(modifier = Modifier.weight(1f)) {
                 Column {
                     Text(
