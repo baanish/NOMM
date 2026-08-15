@@ -49,6 +49,10 @@ kotlin {
             implementation(libs.nucleus.native.http.ktor)
             implementation(libs.nucleus.aot)
 
+            implementation(libs.composewebview)
+
+            implementation(libs.nucleus.fs.watcher)
+            
             implementation(libs.nucleus.notif.win)
             implementation(libs.nucleus.notif.mac)
             implementation(libs.nucleus.notif.linux)
@@ -66,6 +70,7 @@ kotlin {
 
             implementation(libs.coil)
             implementation(libs.coil.ktor)
+            
 
             implementation(libs.materialKolor)
 

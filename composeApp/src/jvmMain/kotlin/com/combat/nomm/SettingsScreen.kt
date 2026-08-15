@@ -859,7 +859,7 @@ fun SettingsTextFieldRow(
 
 private fun openFolder(folder: File) {
     if (!folder.exists()) {
-        println("[NOMM] Folder does not exist: ${folder.absolutePath}")
+        Log.log("Folder does not exist: ${folder.absolutePath}")
         return
     }
     val os = System.getProperty("os.name").lowercase()
@@ -870,6 +870,6 @@ private fun openFolder(folder: File) {
             else -> ProcessBuilder("xdg-open", folder.absolutePath).start()
         }
     } catch (e: Exception) {
-        println("[NOMM] Failed to open folder ${folder.absolutePath}: ${e.message}")
+        Log.log("Failed to open folder ${folder.absolutePath}: ${e.message}")
     }
 }

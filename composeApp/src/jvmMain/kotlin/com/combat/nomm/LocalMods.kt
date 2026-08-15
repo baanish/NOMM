@@ -11,6 +11,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.number
 import kotlinx.datetime.toLocalDateTime
@@ -38,10 +39,9 @@ object LocalMods {
 
     val protectedIds = setOf("NOMM-Integration", "NOSMR")
 
-    internal var nosmrExportJob: Job? = null
+    var nosmrExportJob: Job? = null
 
-    @Volatile
-    private var refreshInProgress = false
+    val refreshInProgress = Mutex(false)
 
 
     fun exportMods() {
@@ -370,9 +370,7 @@ object LocalMods {
     }
 
     fun refresh() {
-        if (refreshInProgress) return
-        refreshInProgress = true
-        try {
+        refreshInProgress.withLockOrSkip {
             loadInstalledModMetas()
             RepoMods.fetchManifest()
 
@@ -412,8 +410,6 @@ object LocalMods {
                     }
                 }
             }
-        } finally {
-            refreshInProgress = false
         }
     }
 
@@ -631,5 +627,18 @@ fun File.moveTo(destination: File): Boolean {
             this.deleteRecursively()
             true
         }.getOrDefault(false)
+    }
+}
+
+inline fun <T> Mutex.withLockOrSkip(skipped: () -> Unit = {}, action: () -> T): T? {
+    return if (tryLock()) {
+        try {
+            action()
+        } finally {
+            unlock()
+        }
+    } else {
+        skipped()
+        null
     }
 }

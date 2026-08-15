@@ -10,6 +10,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
@@ -299,7 +300,10 @@ fun ModItem(mod: Extension, onClick: () -> Unit) {
                 AsyncImage(
                     mod,
                     "Preview Image of ${mod.id}",
-                    modifier = Modifier.aspectRatio(1f).fillMaxSize().clip(MaterialTheme.shapes.small).border(
+                    contentScale = ContentScale.Fit,
+                    alignment = Alignment.Center,
+                    modifier = Modifier.ignoreIntrinsicSize().fillMaxHeight().aspectRatio(1f)
+                        .clip(MaterialTheme.shapes.small).border(
                         1.dp, MaterialTheme.colorScheme.onSurface,MaterialTheme.shapes.small
                     )
                 )

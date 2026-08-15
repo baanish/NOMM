@@ -32,15 +32,15 @@ object RepoMods {
 
     fun fetchManifest() {
         scope.launch {
-            if (!mutex.tryLock()) {
+            mutex.withLockOrSkip({
                 Log.log("Manifest fetch already in progress, skipping")
                 return@launch
-            }
-            try {
-                isLoading.value = true
-                val useFakeManifest = SettingsManager.config.value.fakeManifest
-                val networkFetched = if (useFakeManifest) null else NetworkClient.fetchManifest()
-                val fetched = networkFetched ?: if (useFakeManifest) {
+            }) {
+                try {
+                    isLoading.value = true
+                    val useFakeManifest = SettingsManager.config.value.fakeManifest
+                    val networkFetched = if (useFakeManifest) null else NetworkClient.fetchManifest()
+                    val fetched = networkFetched ?: if (useFakeManifest) {
                         fetchFakeManifest()
                     } else {
                         SettingsManager.cachedManifest.value.manifest.also { fallback ->
@@ -52,17 +52,17 @@ object RepoMods {
                             }
                         }
                     }
-                if (networkFetched != null || useFakeManifest) {
-                    manifestError.value = null
+                    if (networkFetched != null || useFakeManifest) {
+                        manifestError.value = null
+                    }
+                    val distinctMods = fetched.distinctBy { it.id }.associateBy { it.id }
+                    ModsSearch.filterTags = distinctMods.map { it.value }.commonTagFilters()
+                    mods.value = distinctMods
+                    latestGameVersion.value = fetched.latestGameVersion()
+                    ServerBrowser.modHashLookup = buildModHashLookup(mods.value.map { it.value })
+                } finally {
+                    isLoading.value = false
                 }
-                val distinctMods = fetched.distinctBy { it.id }.associateBy { it.id }
-                ModsSearch.filterTags = distinctMods.map { it.value }.commonTagFilters()
-                mods.value = distinctMods
-                latestGameVersion.value = fetched.latestGameVersion()
-                ServerBrowser.modHashLookup = buildModHashLookup(mods.value.map { it.value })
-            } finally {
-                isLoading.value = false
-                mutex.unlock()
             }
             val updatable = LocalMods.mods.value.filter { it.value.hasUpdate }
                 .mapNotNull { mods.value[it.key] }

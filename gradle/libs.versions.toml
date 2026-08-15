@@ -6,7 +6,7 @@ kotlinx-coroutines = "1.11.0"
 ktor = "3.5.0"
 material3 = "1.11.0-alpha07"
 nucleus = "2.4.3"
-
+webview = "1.0.1"
 kotlinx-serialization = "1.11.0"
 kotlinx-datetime = "0.8.0"
 
@@ -17,6 +17,7 @@ materialKolor = "5.0.0-alpha07"
 steamworks4j = "1.10.0"
 
 multiplatform-nav3-ui = "1.1.1"
+
 
 [libraries]
 compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "composeMultiplatform" }
@@ -68,6 +69,8 @@ nucleus-notif-win = { group = "dev.nucleusframework", name = "nucleus.notificati
 nucleus-notif-mac = { group = "dev.nucleusframework", name = "nucleus.notification-macos", version.ref = "nucleus" }
 nucleus-notif-linux = { group = "dev.nucleusframework", name = "nucleus.notification-linux", version.ref = "nucleus" }
 
+nucleus-fs-watcher = { group = "dev.nucleusframework", name = "nucleus.fs-watcher", version.ref = "nucleus" }
+composewebview = { group = "dev.nucleusframework", name = "composewebview", version.ref = "webview" }
 [plugins]
 composeHotReload = { id = "org.jetbrains.compose.hot-reload", version.ref = "composeHotReload" }
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }

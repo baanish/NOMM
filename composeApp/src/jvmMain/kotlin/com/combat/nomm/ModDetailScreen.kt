@@ -18,13 +18,12 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.layout.*
 import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.entryProvider
@@ -87,7 +86,10 @@ fun ModDetailScreen(
                 AsyncImage(
                     mod,
                     "Preview Image of ${mod.id}",
-                    modifier = Modifier.aspectRatio(1f).fillMaxSize().clip(MaterialTheme.shapes.small).border(
+                    contentScale = ContentScale.Fit,
+                    alignment = Alignment.Center,
+                    modifier = Modifier.ignoreIntrinsicSize().fillMaxHeight().aspectRatio(1f)
+                        .clip(MaterialTheme.shapes.small).border(
                         1.dp, MaterialTheme.colorScheme.onSurface, MaterialTheme.shapes.small
                     )
                 )
@@ -166,11 +168,35 @@ fun ModDetails(modMeta: ModMeta?, mod: Extension, modDetailScreen: Boolean = fal
             VerticalDivider(modifier = Modifier.fillMaxHeight().padding(vertical = 4.dp))
         }
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier
-                .horizontalScroll(rememberScrollState(), enabled = false)
+        OverflowRow(
+            spacing = 8.dp,
+            overflowSpacing = 4.dp,
+            overflowBadge = { count, overflowedContent ->
+                TooltipBox(
+                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                        TooltipAnchorPosition.Above
+                    ),
+                    state = rememberTooltipState(),
+                    tooltip = {
+                        DisableSelection {
+
+                            PlainTooltip(
+                                containerColor = MaterialTheme.colorScheme.onSurface,
+                                contentColor = MaterialTheme.colorScheme.surface
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    overflowedContent()
+                                }
+                            }
+                        }
+                    }
+                ) {
+                    TagChip("+$count")
+                }
+            }
         ) {
             if (isOutdated) {
                 TooltipBox(
@@ -240,6 +266,170 @@ fun ModDetails(modMeta: ModMeta?, mod: Extension, modDetailScreen: Boolean = fal
     }
 }
 
+@Composable
+fun OverflowRow(
+    spacing: Dp,
+    overflowSpacing: Dp,
+    modifier: Modifier = Modifier,
+    overflowBadge: @Composable (overflowCount: Int, overflowContent: @Composable () -> Unit) -> Unit,
+    content: @Composable () -> Unit
+) {
+    var overflowCount by remember { mutableIntStateOf(0) }
+    var visibleCount by remember { mutableIntStateOf(0) }
+
+    val overflowContent: @Composable () -> Unit = remember(visibleCount, spacing) {
+        { OverflowContainer(visibleCount = visibleCount, spacing = overflowSpacing, content = content) }
+    }
+
+    Layout(
+        contents = listOf(
+            content,
+            { overflowBadge(overflowCount, overflowContent) }
+        ),
+        modifier = modifier,
+        measurePolicy = remember(spacing) {
+            object : MultiContentMeasurePolicy {
+                override fun MeasureScope.measure(
+                    measurables: List<List<Measurable>>,
+                    constraints: Constraints
+                ): MeasureResult {
+                    val mainMeasurables = measurables.getOrNull(0) ?: emptyList()
+                    val badgeMeasurables = measurables.getOrNull(1) ?: emptyList()
+
+                    val spacingPx = spacing.roundToPx()
+                    val maxWidth = constraints.maxWidth
+
+                    if (mainMeasurables.isEmpty()) {
+                        return layout(0, 0) {}
+                    }
+
+                    val itemPlaceables = mainMeasurables.map { it.measure(constraints.copy(minWidth = 0)) }
+                    val totalWidth = itemPlaceables.sumOf { it.width } +
+                            (itemPlaceables.size - 1).coerceAtLeast(0) * spacingPx
+
+                    if (totalWidth <= maxWidth) {
+                        if (overflowCount != 0) overflowCount = 0
+                        val maxHeight = itemPlaceables.maxOfOrNull { it.height } ?: 0
+                        return layout(totalWidth.coerceAtMost(maxWidth), maxHeight) {
+                            var x = 0
+                            itemPlaceables.forEach { placeable ->
+                                val y = (maxHeight - placeable.height) / 2
+                                placeable.placeRelative(x, y)
+                                x += placeable.width + spacingPx
+                            }
+                        }
+                    } else {
+                        val badgeMeasurable = badgeMeasurables.firstOrNull()
+                        val badgePlaceable = badgeMeasurable?.measure(constraints.copy(minWidth = 0))
+                        val badgeWidth = badgePlaceable?.width ?: 0
+
+                        var calculatedVisibleCount = 0
+                        var currentWidth = 0
+
+                        for (i in itemPlaceables.indices) {
+                            val itemWidth = itemPlaceables[i].width
+                            val widthWithCurrent = currentWidth + itemWidth + if (i > 0) spacingPx else 0
+
+                            if (widthWithCurrent + spacingPx + badgeWidth <= maxWidth) {
+                                currentWidth = widthWithCurrent
+                                calculatedVisibleCount = i + 1
+                            } else {
+                                break
+                            }
+                        }
+
+                        val calculatedOverflowCount = itemPlaceables.size - calculatedVisibleCount
+
+                        if (overflowCount != calculatedOverflowCount) {
+                            overflowCount = calculatedOverflowCount
+                        }
+                        if (visibleCount != calculatedVisibleCount) {
+                            visibleCount = calculatedVisibleCount
+                        }
+
+                        val visiblePlaceables = itemPlaceables.take(calculatedVisibleCount)
+                        val layoutHeight = maxOf(
+                            visiblePlaceables.maxOfOrNull { it.height } ?: 0,
+                            badgePlaceable?.height ?: 0
+                        )
+
+                        return layout(maxWidth, layoutHeight) {
+                            var x = 0
+                            visiblePlaceables.forEach { placeable ->
+                                // Vertical centering in Row
+                                val y = (layoutHeight - placeable.height) / 2
+                                placeable.placeRelative(x, y)
+                                x += placeable.width + spacingPx
+                            }
+                            if (badgePlaceable != null) {
+                                val badgeY = (layoutHeight - badgePlaceable.height) / 2
+                                badgePlaceable.placeRelative(x, badgeY)
+                            }
+                        }
+                    }
+                }
+
+                override fun IntrinsicMeasureScope.maxIntrinsicHeight(
+                    measurables: List<List<IntrinsicMeasurable>>,
+                    width: Int
+                ): Int = measurables.flatten().maxOfOrNull { it.maxIntrinsicHeight(width) } ?: 0
+
+                override fun IntrinsicMeasureScope.minIntrinsicHeight(
+                    measurables: List<List<IntrinsicMeasurable>>,
+                    width: Int
+                ): Int = measurables.flatten().maxOfOrNull { it.minIntrinsicHeight(width) } ?: 0
+
+                override fun IntrinsicMeasureScope.maxIntrinsicWidth(
+                    measurables: List<List<IntrinsicMeasurable>>,
+                    height: Int
+                ): Int {
+                    val mainMeasurables = measurables.getOrNull(0) ?: emptyList()
+                    val spacingPx = spacing.roundToPx()
+                    return mainMeasurables.sumOf { it.maxIntrinsicWidth(height) } +
+                            (mainMeasurables.size - 1).coerceAtLeast(0) * spacingPx
+                }
+
+                override fun IntrinsicMeasureScope.minIntrinsicWidth(
+                    measurables: List<List<IntrinsicMeasurable>>,
+                    height: Int
+                ): Int {
+                    val mainMeasurables = measurables.getOrNull(0) ?: emptyList()
+                    return mainMeasurables.firstOrNull()?.minIntrinsicWidth(height) ?: 0
+                }
+            }
+        }
+    )
+}
+
+@Composable
+fun OverflowContainer(
+    visibleCount: Int,
+    spacing: Dp = 8.dp,
+    content: @Composable () -> Unit
+) {
+    Layout(content = content) { measurables, constraints ->
+        val overflowMeasurables = measurables.drop(visibleCount)
+        if (overflowMeasurables.isEmpty()) {
+            return@Layout layout(0, 0) {}
+        }
+
+        val spacingPx = spacing.roundToPx()
+        val placeables = overflowMeasurables.map { it.measure(constraints) }
+
+        val maxWidth = placeables.maxOfOrNull { it.width } ?: 0
+        val totalSpacing = (placeables.size - 1).coerceAtLeast(0) * spacingPx
+        val totalHeight = placeables.sumOf { it.height } + totalSpacing
+
+        layout(maxWidth, totalHeight) {
+            var y = 0
+            placeables.forEach { placeable ->
+                val x = (maxWidth - placeable.width) / 2
+                placeable.placeRelative(x, y)
+                y += placeable.height + spacingPx
+            }
+        }
+    }
+}
 
 @Composable
 fun TagChip(
@@ -253,7 +443,7 @@ fun TagChip(
         LocalMinimumInteractiveComponentSize provides Dp.Unspecified,
     ) {
         Surface(
-            modifier = Modifier.height(IntrinsicSize.Min).clickable(enabled && onTagClick!= null) { onTagClick?.invoke(tag) },
+            modifier = Modifier.clickable(enabled && onTagClick != null) { onTagClick?.invoke(tag) },
             shape = CircleShape,
             color = containerColor,
             contentColor = contentColor,
@@ -462,6 +652,7 @@ fun ModActions(
                     positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
                         TooltipAnchorPosition.Above
                     ),
+                    modifier = Modifier.clip(MaterialTheme.shapes.medium),
                     state = rememberTooltipState(),
                     tooltip = {
                         PlainTooltip(
@@ -510,6 +701,7 @@ fun ModActions(
                     positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
                         TooltipAnchorPosition.Above
                     ),
+                    modifier = Modifier.clip(MaterialTheme.shapes.medium),
                     state = rememberTooltipState(),
                     tooltip = {
                         PlainTooltip(
@@ -1053,3 +1245,38 @@ fun DetailListEmptySection(text: String) {
         modifier = Modifier.padding(8.dp)
     )
 }
+
+
+fun Modifier.ignoreIntrinsicSize(): Modifier = this.then(
+    object : LayoutModifier {
+        override fun MeasureScope.measure(
+            measurable: Measurable,
+            constraints: Constraints
+        ): MeasureResult {
+            val placeable = measurable.measure(constraints)
+            return layout(placeable.width, placeable.height) {
+                placeable.placeRelative(0, 0)
+            }
+        }
+
+        override fun IntrinsicMeasureScope.minIntrinsicWidth(
+            measurable: IntrinsicMeasurable,
+            height: Int
+        ): Int = 0
+
+        override fun IntrinsicMeasureScope.minIntrinsicHeight(
+            measurable: IntrinsicMeasurable,
+            width: Int
+        ): Int = 0
+
+        override fun IntrinsicMeasureScope.maxIntrinsicWidth(
+            measurable: IntrinsicMeasurable,
+            height: Int
+        ): Int = 0
+
+        override fun IntrinsicMeasureScope.maxIntrinsicHeight(
+            measurable: IntrinsicMeasurable,
+            width: Int
+        ): Int = 0
+    }
+)

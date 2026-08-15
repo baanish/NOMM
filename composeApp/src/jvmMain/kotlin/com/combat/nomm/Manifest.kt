@@ -155,10 +155,10 @@ fun fetchFakeManifest(): List<Extension> {
             ))
         }
 
-        val tagCount = rnd.nextInt(1, 5)
+        val tagCount = rnd.nextInt(1, 15)
         val tags = ArrayList<String>(tagCount)
         repeat(tagCount) {
-            tags.add(latinWords[rnd.nextInt(16)])
+            tags.add(latinWords[rnd.nextInt(16)] + latinWords[rnd.nextInt(16)])
         }
 
         manifest.add(Extension(

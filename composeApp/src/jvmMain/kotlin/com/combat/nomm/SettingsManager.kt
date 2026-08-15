@@ -144,7 +144,7 @@ object SettingsManager {
 }
 
 fun reportNommError(title: String, message: String) {
-    println("[NOMM] $title: $message")
+    Log.log("$title: $message")
     SettingsManager.criticalInformation.add(
         Triple(
             buildAnnotatedString { append(title) },
