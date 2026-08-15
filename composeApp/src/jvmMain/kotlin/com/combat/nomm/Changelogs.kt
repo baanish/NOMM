@@ -60,6 +60,10 @@ val changelogs = mutableMapOf(
         Added Client and Server Mod tags for Mods that provide them.
         Added a Count Badge to show how many Tag Filters are selected.
     """.trimIndent(),
+
+    Version(5, 3, 1) to """
+        Fixed an issue when interacting with Tags.
+    """.trimIndent(),
 )
 
 fun changelogsAnnotatedString(): AnnotatedString = buildAnnotatedString {
