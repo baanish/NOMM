@@ -70,7 +70,7 @@ fun main(args: Array<String>) {
         LaunchedEffect(Unit) {
             initializeSevenZipNative()
             val initialFile = args.firstOrNull()
-            if (initialFile != null && (initialFile.endsWith("nomm.json") || initialFile.endsWith("nommpack"))) {
+            if (initialFile != null && (initialFile.endsWith(".nomm.json") || initialFile.endsWith(".nommpack"))) {
                 LocalMods.importMods(PlatformFile(initialFile))
             }
             refresh()

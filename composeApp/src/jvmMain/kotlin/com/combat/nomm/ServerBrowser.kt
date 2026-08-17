@@ -150,7 +150,7 @@ object ServerBrowser {
 
     private fun syncModsToModlist(modlist: List<PackageReference>) {
         val modlistIds = modlist.map { it.id }.toSet()
-        LocalMods.mods.value.forEach { (id, meta) ->
+        LocalMods.mods.forEach { (id, meta) ->
             if (id in LocalMods.protectedIds) return@forEach
             if (modlistIds.contains(id) && meta.enabled != true) {
                 meta.enable()
@@ -161,7 +161,7 @@ object ServerBrowser {
     }
 
     private fun disableAllMods() {
-        LocalMods.mods.value.forEach { (id, meta) ->
+        LocalMods.mods.forEach { (id, meta) ->
             if (id in LocalMods.protectedIds) return@forEach
             if (meta.enabled == true) {
                 meta.disable()
@@ -432,11 +432,10 @@ object ServerBrowser {
     }
 
     private fun calculateModStatuses(modlist: List<PackageReference>): List<ServerModStatus> {
-        val localMods = LocalMods.mods.value
         val repoMods = RepoMods.mods.value
 
         return modlist.map { ref ->
-            val local = localMods[ref.id]
+            val local = LocalMods.mods[ref.id]
             val repo = repoMods[ref.id]
 
             when {

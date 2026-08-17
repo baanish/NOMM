@@ -53,9 +53,8 @@ fun ModDetailScreen(
     val backStack = rememberNavBackStack(ModNavigation.config, ModNavigation.Details)
     val currentKey = backStack.lastOrNull() ?: ModNavigation.Details
 
-    val installedMods by LocalMods.mods.collectAsState()
 
-    val modMeta = installedMods[mod.id]
+    val modMeta = LocalMods.mods[mod.id]
 
     DetailScreen(
         backStack = backStack,
@@ -100,9 +99,8 @@ fun ModDetailScreen(
         },
         buttons = {
             val installStatuses by Installer.installStatuses.collectAsState()
-            val installedMods by LocalMods.mods.collectAsState()
             val taskState = installStatuses[mod.id]
-            val modMeta = installedMods[mod.id]
+            val modMeta = LocalMods.mods[mod.id]
             ModActions(taskState, modMeta, mod)
         },
         onBack = onBack,
@@ -443,7 +441,7 @@ fun TagChip(
         LocalMinimumInteractiveComponentSize provides Dp.Unspecified,
     ) {
         Surface(
-            modifier = Modifier.clickable(enabled && onTagClick != null) { onTagClick?.invoke(tag) },
+            modifier = Modifier.clip(CircleShape).clickable(enabled && onTagClick != null) { onTagClick?.invoke(tag) },
             shape = CircleShape,
             color = containerColor,
             contentColor = contentColor,
@@ -463,12 +461,12 @@ fun ModActions(
     taskState: TaskState?,
     modMeta: ModMeta?,
     mod: Extension,
-    controlSize: Dp = 40.dp,
-    iconSize: Dp = 24.dp,
     modifier: Modifier = Modifier,
     version: Version? = null,
     error: Boolean = false,
 ) {
+    val controlSize: Dp = 40.dp
+    val iconSize: Dp = 24.dp
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
@@ -820,8 +818,7 @@ fun ModVersionsContent(
         mod.artifacts.sortedByDescending { it.version }
     }
 
-    val mods by LocalMods.mods.collectAsState()
-    val modMeta = mods[mod.id]
+    val modMeta = LocalMods.mods[mod.id]
 
     val state = rememberLazyListState()
 
@@ -1164,10 +1161,9 @@ private fun DependencyItemCard(
     ) {
         if (mod == null) return@DetailListItemCard
         val installStatuses by Installer.installStatuses.collectAsState()
-        val installedMods by LocalMods.mods.collectAsState()
         val taskState = installStatuses[mod.id]
-        val modMeta = installedMods[mod.id]
-        ModActions(taskState, modMeta, mod, 40.dp, 24.dp)
+        val modMeta = LocalMods.mods[mod.id]
+        ModActions(taskState, modMeta, mod)
     }
 }
 

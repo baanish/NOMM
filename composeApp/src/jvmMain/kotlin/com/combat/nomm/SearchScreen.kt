@@ -269,10 +269,9 @@ fun ListScreenItem(
 @Composable
 fun ModItem(mod: Extension, onClick: () -> Unit) {
     val installStatuses by Installer.installStatuses.collectAsState()
-    val installedMods by LocalMods.mods.collectAsState()
 
     val taskState = installStatuses[mod.id]
-    val modMeta = installedMods[mod.id]
+    val modMeta = LocalMods.mods[mod.id]
 
 
     ListScreenItem(

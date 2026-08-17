@@ -44,10 +44,9 @@ fun ServerBrowserScreen(
             }
         }
     }
-    
-    
-    val localMods by LocalMods.mods.collectAsState()
-    LaunchedEffect(localMods) {
+
+
+    LaunchedEffect(LocalMods.mods) {
         ServerBrowser.refreshModStatuses()
     }
 

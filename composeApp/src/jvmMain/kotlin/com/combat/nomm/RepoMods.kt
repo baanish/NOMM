@@ -64,7 +64,7 @@ object RepoMods {
                     isLoading.value = false
                 }
             }
-            val updatable = LocalMods.mods.value.filter { it.value.hasUpdate }
+            val updatable = LocalMods.mods.filter { it.value.hasUpdate }
                 .mapNotNull { mods.value[it.key] }
             if (updatable.isNotEmpty() && !SettingsManager.config.value.ignoreNewUpdates) {
                 val hasExistingUpdateNotification = SettingsManager.criticalInformation.any {
@@ -147,7 +147,7 @@ object RepoMods {
             ?: extension.artifacts.maxByOrNull { it.version }
             ?: return
 
-        val installedMod = LocalMods.mods.value[id]
+        val installedMod = LocalMods.mods[id]
         if (installedMod != null) {
             val currentVersion = installedMod.artifact?.version
             if (currentVersion != null && currentVersion == targetArtifact.version) return
@@ -174,7 +174,7 @@ object RepoMods {
             runCatching {
                 File(dir, "meta.json").writeText(json.encodeToString(metaData))
                 LocalMods.refresh()
-                LocalMods.mods.value[id]?.enable()
+                LocalMods.mods[id]?.enable()
             }
         }
     }
@@ -204,7 +204,7 @@ object RepoMods {
         }
 
 
-        val installedMod = LocalMods.mods.value[id]
+        val installedMod = LocalMods.mods[id]
         val wasEnabled = installedMod?.enabled == true
         installedMod?.disable()
 
@@ -227,7 +227,7 @@ object RepoMods {
 
         Installer.installMod(id, url, dir, hash, onError = {
             if (wasEnabled) {
-                LocalMods.mods.value[id]?.enable()
+                LocalMods.mods[id]?.enable()
             }
             reportNommError("Mod installation failed", it.message ?: "See the terminal for details.")
         }) {

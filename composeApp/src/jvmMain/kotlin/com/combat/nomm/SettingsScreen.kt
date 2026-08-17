@@ -295,9 +295,9 @@ fun SettingsScreen() {
                     onCheckedChange = { newHSV ->
                         SettingsManager.updateConfig(currentConfig.copy(nosmr = newHSV))
                         if (SettingsManager.config.value.nosmr) {
-                            LocalMods.mods.value["NOSMR"]?.enable()
+                            LocalMods.mods["NOSMR"]?.enable()
                         } else {
-                            LocalMods.mods.value["NOSMR"]?.disable()
+                            LocalMods.mods["NOSMR"]?.disable()
                         }
                     }
                 )
