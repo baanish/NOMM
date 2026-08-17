@@ -64,6 +64,12 @@ val changelogs = mutableMapOf(
     Version(5, 3, 1) to """
         Fixed an issue when interacting with Tags.
     """.trimIndent(),
+    Version(5, 4, 0) to """
+        Added a Combined Tag Chip that shows up on overflow and can be hovered to view overflowed Tag Chips.
+        Added a Count Badge to show how many Server Browser Filters are selected.
+        Added a Badge to show what Sort By option is selected.
+        Fixed Logs actually logging.
+    """.trimIndent(),
 )
 
 fun changelogsAnnotatedString(): AnnotatedString = buildAnnotatedString {
