@@ -191,6 +191,21 @@ object ServerBrowser {
     var showModded: Boolean by mutableStateOf(false)
     var showVanilla: Boolean by mutableStateOf(false)
     var showFavorites: Boolean by mutableStateOf(false)
+
+    val filterCount: Int
+        get() {
+            var count = 0
+            if (showUser) count++
+            if (showDedicated) count++
+            if (showPve) count++
+            if (showPvp) count++
+            if (showModded) count++
+            if (showVanilla) count++
+            if (showFavorites) count++
+            return count
+        }
+    
+    
     var sortBy: SortType by mutableStateOf(SortType.PING)
 
     fun load() {
