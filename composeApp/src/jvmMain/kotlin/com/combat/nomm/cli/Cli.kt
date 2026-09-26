@@ -30,8 +30,9 @@ class Cli(
             output = CliOutput(parsed.has("json"), out, err)
             val (command, operands) = resolveCommand(parsed.positionals)
             if (command == null || command.name == "help" || parsed.has("help")) {
-                out.println(if (command == null || command.name == "help") helpText(operands) else command.helpText())
-                return@runBlocking EXIT_OK
+                val text = if (command == null || command.name == "help") helpText(operands) else command.helpText()
+                output.success("help", result(HelpView(text), text))
+                return@runBlocking if (command == null) EXIT_USAGE else EXIT_OK
             }
             commandName = command.name
             parsed.requireOnly(command.name, command.options)
@@ -253,8 +254,16 @@ private class Session(val env: CliEnvironment, val args: ParsedArgs, val output:
     private var installed: MutableMap<String, ModMeta>? = null
 
     /** Installed mods, as a map the mod operations update in place. */
-    fun mods(): MutableMap<String, ModMeta> =
-        installed ?: scanInstalledMods(requireBepInEx()).mods.toMutableMap().also { installed = it }
+    fun mods(): MutableMap<String, ModMeta> = installed ?: run {
+        val scan = scanInstalledMods(requireBepInEx())
+        if (scan.duplicates.isNotEmpty()) {
+            output.warn(
+                "Older copies of installed mods are still in the game, and BepInEx may load them: " +
+                    scan.duplicates.joinToString { it.path } + ". Delete them, or open the NOMM app to clean them up."
+            )
+        }
+        scan.mods.toMutableMap().also { installed = it }
+    }
 
     suspend fun computedMods(): Map<String, ModMeta> = withComputedState(mods(), catalog())
 
@@ -270,7 +279,12 @@ private class Session(val env: CliEnvironment, val args: ParsedArgs, val output:
         while (env.isGameRunning()) delay(2.seconds)
     }
 
-    fun <T> locked(action: () -> T): T = sync.lock.withLock(action = action)
+    /** Runs a change under the mod lock, on a fresh scan so it never acts on files that moved since. */
+    fun <T> locked(action: (mods: MutableMap<String, ModMeta>) -> T): T = sync.lock.withLock {
+        val fresh = scanInstalledMods(requireBepInEx()).mods.toMutableMap()
+        installed = fresh
+        action(fresh)
+    }
 
     /** Keeps NOSMR's mod list current and tells an open GUI to rescan. */
     fun finishChange() {
@@ -474,6 +488,7 @@ private suspend fun Session.update(operands: List<String>): CommandResult {
     if (operands.isEmpty() && !args.has("all")) throw CliUsageException("Name the mods to update, or pass --all.")
     if (operands.isNotEmpty() && args.has("all")) throw CliUsageException("Pass mod ids or --all, not both.")
     requireBepInEx()
+    awaitGameClosed()
     val catalog = requireCatalog()
     val mods = computedMods()
 
@@ -501,7 +516,6 @@ private suspend fun Session.update(operands: List<String>): CommandResult {
     }
     if (targets.isEmpty()) return result(InstallView(emptyList(), emptyList()), "Everything is up to date.")
 
-    awaitGameClosed()
     return runInstall(targets.map { PackageReference(it) }, catalog, withDependencies = true)
 }
 
@@ -541,11 +555,11 @@ private suspend fun Session.runInstall(
     // Requested mods need their installed-but-disabled dependencies enabled too.
     val enabledDependencies = mutableListOf<String>()
     if (withDependencies) {
-        locked {
-            requests.mapNotNull { mods[it.id] }.forEach { mod ->
+        locked { current ->
+            requests.mapNotNull { current[it.id] }.forEach { mod ->
                 val needed = mod.artifact?.dependencies.orEmpty().map { it.id } + listOfNotNull(mod.artifact?.extends?.id)
-                needed.filter { mods[it]?.enabled == false }.forEach { dependency ->
-                    if (enableMod(mods, bepInEx, dependency)) enabledDependencies.add(dependency)
+                needed.filter { current[it]?.enabled == false }.forEach { dependency ->
+                    if (enableMod(current, bepInEx, dependency)) enabledDependencies.add(dependency)
                 }
             }
         }
@@ -563,19 +577,21 @@ private suspend fun Session.runInstall(
 
 private suspend fun Session.uninstall(ids: List<String>): CommandResult {
     val bepInEx = requireBepInEx()
-    val mods = mods()
     ids.forEach { id ->
-        if (id !in mods) throw ModException(ModErrorKind.NOT_FOUND, "$id is not installed.")
         if (id in protectedModIds) throw ModException(ModErrorKind.INVALID, "$id is managed by NOMM and can't be uninstalled here.")
     }
     awaitGameClosed()
 
-    val enabledBefore = mods.filterValues { it.enabled == true }.keys
+    var enabledBefore = emptySet<String>()
+    var mods = mutableMapOf<String, ModMeta>()
     val removed = mutableListOf<String>()
     try {
-        locked {
+        locked { current ->
+            mods = current
+            ids.forEach { if (it !in current) throw ModException(ModErrorKind.NOT_FOUND, "$it is not installed.") }
+            enabledBefore = current.filterValues { it.enabled == true }.keys
             ids.forEach { id ->
-                if (!uninstallMod(mods, bepInEx, id)) {
+                if (!uninstallMod(current, bepInEx, id)) {
                     throw ModException(ModErrorKind.FAILED, "Could not delete $id. A running game keeps its files locked.")
                 }
                 removed.add(id)
@@ -593,18 +609,20 @@ private suspend fun Session.uninstall(ids: List<String>): CommandResult {
 
 private suspend fun Session.toggle(ids: List<String>, enable: Boolean): CommandResult {
     val bepInEx = requireBepInEx()
-    val mods = mods()
-    ids.forEach { if (it !in mods) throw ModException(ModErrorKind.NOT_FOUND, "$it is not installed.") }
     awaitGameClosed()
 
-    val before = mods.mapValues { it.value.enabled == true }
+    var before = emptyMap<String, Boolean>()
+    var mods = mutableMapOf<String, ModMeta>()
     try {
-        locked {
+        locked { current ->
+            mods = current
+            ids.forEach { if (it !in current) throw ModException(ModErrorKind.NOT_FOUND, "$it is not installed.") }
+            before = current.mapValues { it.value.enabled == true }
             ids.forEach { id ->
-                val changed = if (enable) enableMod(mods, bepInEx, id) else disableMod(mods, bepInEx, id)
+                val changed = if (enable) enableMod(current, bepInEx, id) else disableMod(current, bepInEx, id)
                 if (!changed) {
-                    val parent = mods[id]?.artifact?.extends?.id
-                    val reason = if (enable && parent != null && parent !in mods) {
+                    val parent = current[id]?.artifact?.extends?.id
+                    val reason = if (enable && parent != null && parent !in current) {
                         "it extends $parent, which is not installed"
                     } else {
                         "its files could not be moved. A running game keeps them locked"
@@ -646,11 +664,10 @@ private suspend fun Session.devRegister(source: File): CommandResult {
     val dependencies = args.values("dependency").map(::parseReference).takeIf { it.isNotEmpty() }
 
     val bepInEx = requireBepInEx()
-    val mods = mods()
-    if (version == null && mods[id]?.localBuild == null) {
+    awaitGameClosed()
+    if (version == null && mods()[id]?.localBuild == null) {
         throw CliUsageException("--version is required the first time a build is registered.")
     }
-    awaitGameClosed()
 
     val request = LocalBuildRequest(
         source = sourceFile,
@@ -661,8 +678,12 @@ private suspend fun Session.devRegister(source: File): CommandResult {
         enabled = if (args.has("disabled")) false else null,
         replaceCatalogMod = args.has("replace"),
     )
-    val registered = try {
-        locked { registerLocalBuild(mods, bepInEx, request) }
+    var mods = mutableMapOf<String, ModMeta>()
+    try {
+        locked { current ->
+            mods = current
+            registerLocalBuild(current, bepInEx, request)
+        }
     } finally {
         finishChange()
     }

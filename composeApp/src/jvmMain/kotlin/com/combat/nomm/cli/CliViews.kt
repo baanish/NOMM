@@ -173,3 +173,6 @@ internal data class VersionView(val version: String)
 
 @Serializable
 internal data class SkillView(val content: String?, val file: String?)
+
+@Serializable
+internal data class HelpView(val text: String)

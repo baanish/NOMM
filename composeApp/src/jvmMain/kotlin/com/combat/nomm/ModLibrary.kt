@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
@@ -244,12 +245,14 @@ data class LocalBuildRequest(
 )
 
 private val invalidIdCharacters = Regex("""[<>:"/\\|?*\x00-\x1F]""")
+private val windowsReservedNames = Regex("""(?i)(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(\..*)?""")
 
 fun validateModId(id: String): String? = when {
     id.isBlank() -> "The mod id is empty."
     id != id.trim() -> "The mod id has leading or trailing spaces."
     invalidIdCharacters.containsMatchIn(id) -> "The mod id \"$id\" contains characters that can't be in a folder name."
-    id == "." || id == ".." || id.endsWith(".") -> "The mod id \"$id\" can't be used as a folder name."
+    id == "." || id == ".." || id.endsWith(".") || windowsReservedNames.matches(id) ->
+        "The mod id \"$id\" can't be used as a folder name."
     id == "addons" || id == "meta.json" -> "The mod id \"$id\" is reserved by NOMM."
     id in protectedModIds -> "$id is managed by NOMM."
     else -> null
@@ -287,18 +290,32 @@ fun registerLocalBuild(
         )
     }
 
+    // Windows folders ignore case, so "mymod" would land on top of an installed "MyMod".
+    mods.keys.find { it != request.id && it.equals(request.id, ignoreCase = true) }?.let { other ->
+        throw ModException(ModErrorKind.INVALID, "$other is already installed. Mod ids can't differ only in case; use --id $other.")
+    }
+
     val existingDir = existing?.file?.takeIf { it.isDirectory }
     val targetDir = existingDir ?: if (request.enabled == false) {
         resolveArchiveEntry(disabledDir, request.id)
     } else {
         resolveArchiveEntry(pluginsDir, request.id)
     }
+    if (existingDir == null && targetDir.exists()) {
+        val owner = mods.values.find { it.file?.canonicalFile == targetDir.canonicalFile }
+        if (owner != null) {
+            throw ModException(ModErrorKind.INVALID, "${targetDir.path} already holds ${owner.id}. Use --id ${owner.id}, or uninstall it first.")
+        }
+    }
 
     // A loose DLL or folder dropped straight into plugins is adopted rather than copied, so BepInEx
     // doesn't load it twice.
     val sourceParent = source.parentFile?.canonicalFile
     val adoptsLooseMod = sourceParent == pluginsDir.canonicalFile || sourceParent == disabledDir.canonicalFile
-    val metadataOnly = source.isDirectory && source.canonicalFile == targetDir.canonicalFile
+    // A build output straight into the mod's folder is registered where it is. Replacing the folder
+    // with just the DLL would delete everything built beside it.
+    val metadataOnly = targetDir.exists() &&
+        source.canonicalFile.toPath().startsWith(targetDir.canonicalFile.toPath())
 
     val previous = existing?.takeIf { it.localBuild != null }
     val version = request.version ?: previous?.artifact?.version
@@ -479,7 +496,7 @@ fun File.moveTo(destination: File): Boolean {
     if (!this.exists()) return false
     if (this.canonicalPath == destination.canonicalPath) return true
 
-    return runCatching {
+    return try {
         deleteModFile(destination)
         destination.parentFile?.mkdirs()
         Files.move(
@@ -489,10 +506,14 @@ fun File.moveTo(destination: File): Boolean {
             StandardCopyOption.ATOMIC_MOVE
         )
         true
-    }.getOrElse {
+    } catch (_: AtomicMoveNotSupportedException) {
+        // Only across volumes. Any other failure, such as a file the running game has open, must not
+        // turn into a copy that deletes part of the source and then gives up.
         runCatching {
             this.copyRecursively(destination, overwrite = true)
             deleteModFile(this)
         }.getOrDefault(false)
+    } catch (_: Exception) {
+        false
     }
 }

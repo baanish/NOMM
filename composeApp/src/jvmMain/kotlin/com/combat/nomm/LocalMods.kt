@@ -341,11 +341,15 @@ object LocalMods {
 
         File(bepinexFolder, "plugins").mkdirs()
         File(bepinexFolder, "disabledPlugins").mkdirs()
-        val scan = scanInstalledMods(bepinexFolder)
-        if (scan.duplicates.isNotEmpty()) {
-            runCatching {
-                modSync.lock.withLock(2.seconds) { scan.duplicates.forEach(::deleteModFile) }
-            }.onFailure { Log.log("Skipped removing duplicate mods: ${it.message}") }
+        // Duplicates are only removed from a scan made under the lock, so a move by another
+        // NOMM process can't make one mod look like two and lose the real copy.
+        val scan = runCatching {
+            modSync.lock.withLock(2.seconds) {
+                scanInstalledMods(bepinexFolder).also { it.duplicates.forEach(::deleteModFile) }
+            }
+        }.getOrElse {
+            Log.log("Mods are being changed by another NOMM process, rescanning without removing duplicates")
+            scanInstalledMods(bepinexFolder)
         }
 
         // Drop mods that are gone from disk, such as ones another NOMM process uninstalled.
@@ -369,8 +373,8 @@ object LocalMods {
                 val change = modSync.lastChange()
                 if (change != lastChange) {
                     lastChange = change
-                    Log.log("Mods changed outside the GUI, refreshing")
-                    refresh()
+                    Log.log("Mods changed outside the GUI, rescanning")
+                    refreshInProgress.withLockOrSkip { loadInstalledModMetas() }
                 }
             }
         }
@@ -389,6 +393,7 @@ object LocalMods {
             reportNommError(errorTitle, e.message ?: "")
             return false
         }
+        if (!changed) Log.log("$errorTitle: its files could not be moved")
         recalculateAllProblems()
         giveNOSMRnommpack()
         return changed

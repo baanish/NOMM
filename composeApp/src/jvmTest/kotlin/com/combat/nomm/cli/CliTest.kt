@@ -201,6 +201,9 @@ class CliTest {
         assertEquals(3, env.cli("enable", "Nope").exitCode)
         assertEquals(3, env.cli("info", "Nope").exitCode)
         assertEquals(0, env.cli("help").exitCode)
+        assertEquals(2, env.cli().exitCode)
+        val help = env.cli("help", "--json")
+        assertTrue(help.json.getValue("data").jsonObject.getValue("text").jsonPrimitive.content.startsWith("NOMM command line"))
         assertEquals(0, env.cli("help", "dev", "register").exitCode)
         assertEquals(0, env.cli("install", "--help").exitCode)
     }

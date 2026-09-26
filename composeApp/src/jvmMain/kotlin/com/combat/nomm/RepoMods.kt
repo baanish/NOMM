@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import java.io.File
+import kotlin.time.Duration.Companion.seconds
 
 object RepoMods {
     private val mutex = Mutex()
@@ -212,7 +213,10 @@ object RepoMods {
             return
         }
 
-        if (dir.exists() && !dir.deleteRecursively()) {
+        val cleared = runCatching {
+            LocalMods.modSync.lock.withLock(5.seconds) { !dir.exists() || deleteModFile(dir) }
+        }.getOrDefault(false)
+        if (!cleared) {
             reportNommError("Cannot install mod", "Could not remove the previous install for $id.")
             return
         }

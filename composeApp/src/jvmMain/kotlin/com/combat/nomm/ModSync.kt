@@ -41,9 +41,10 @@ class ModLock(private val lockFile: File) {
     private var fileLock: FileLock? = null
 
     fun <T> withLock(timeout: Duration = 30.seconds, action: () -> T): T {
+        val deadline = System.nanoTime() + timeout.inWholeNanoseconds
         if (!threadLock.tryLock(timeout.inWholeMilliseconds, TimeUnit.MILLISECONDS)) throw busy()
         try {
-            if (holdCount == 0) acquire(timeout)
+            if (holdCount == 0) acquire(deadline)
             holdCount++
             try {
                 return action()
@@ -56,10 +57,9 @@ class ModLock(private val lockFile: File) {
         }
     }
 
-    private fun acquire(timeout: Duration) {
+    private fun acquire(deadline: Long) {
         lockFile.parentFile?.mkdirs()
         val openedChannel = FileChannel.open(lockFile.toPath(), StandardOpenOption.CREATE, StandardOpenOption.WRITE)
-        val deadline = System.nanoTime() + timeout.inWholeNanoseconds
         try {
             while (true) {
                 val acquired = try {

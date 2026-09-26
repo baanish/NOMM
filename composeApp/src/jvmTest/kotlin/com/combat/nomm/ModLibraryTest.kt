@@ -188,6 +188,32 @@ class ModLibraryTest {
     }
 
     @Test
+    fun `registering a DLL built into its mod folder keeps the files beside it`() = TestGame().use { game ->
+        val dir = File(game.plugins, "MyMod").apply { mkdirs() }
+        val dll = File(dir, "MyMod.dll").apply { writeText("dll") }
+        File(dir, "assets.bundle").writeText("assets")
+
+        registerLocalBuild(game.mods(), game.bepInEx, LocalBuildRequest(dll, "MyMod", Version(1)))
+
+        assertEquals("dll", dll.readText())
+        assertEquals("assets", File(dir, "assets.bundle").readText())
+        assertEquals(Version(1), scanInstalledMods(game.bepInEx).mods.getValue("MyMod").artifact?.version)
+    }
+
+    @Test
+    fun `registering an id that differs only in case is refused`() = TestGame().use { game ->
+        game.addMod("MyMod")
+        val mods = game.mods()
+
+        val error = assertFailsWith<ModException> {
+            registerLocalBuild(mods, game.bepInEx, LocalBuildRequest(game.buildOutput("mymod"), "mymod", Version(1), replaceCatalogMod = true))
+        }
+
+        assertEquals(ModErrorKind.INVALID, error.kind)
+        assertEquals("MyMod 1.0.0", File(game.plugins, "MyMod/MyMod.dll").readText())
+    }
+
+    @Test
     fun `local builds never report catalog updates`() = TestGame().use { game ->
         val mods = game.mods()
         registerLocalBuild(mods, game.bepInEx, LocalBuildRequest(game.buildOutput("Shared"), "Shared", Version(0, 1)))
@@ -199,10 +225,11 @@ class ModLibraryTest {
 
     @Test
     fun `rejects mod ids that can't be folder names`() {
-        listOf("", "../escape", "a/b", "a\\b", "con:", "addons", "NOSMR", "trailing.").forEach {
+        listOf("", "../escape", "a/b", "a\\b", "con:", "CON", "nul.txt", "com1", "addons", "NOSMR", "trailing.").forEach {
             assertNotNull(validateModId(it), "\"$it\" should be rejected")
         }
         assertNull(validateModId("BaanishUiImprovements"))
+        assertNull(validateModId("Console"))
     }
 
     @Test
