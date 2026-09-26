@@ -34,6 +34,29 @@ Download the appropriate file for your platform from the [Latest Release](https:
 
 To work NOMM retrieves a manifest from [NOMNOM](https://github.com/KopterBuzz/NOMNOM) to get the list of mods. To add your own mods go there.
 
+## Command Line
+
+NOMM also runs as a command line tool, `nomm` (`nomm.exe` next to the app on Windows). It works on the same mods
+as the app, and an open app refreshes by itself when the command line changes something. It's meant for scripts
+and for coding agents that build and test mods.
+
+```shell
+nomm list                                   # installed mods, updates and problems
+nomm install SomeMod                        # install from the catalog, with dependencies
+nomm enable SomeMod / nomm disable SomeMod
+nomm update --all
+nomm dev register bin/Release/MyMod.dll --version 0.1.0   # deploy a local build as a mod
+nomm launch --wait
+nomm logs --follow --grep MyMod             # BepInEx log until the game exits
+```
+
+Every command takes `--json` for machine-readable output. `nomm help` lists the commands and exit codes.
+`nomm skill` prints a guide that teaches a coding agent to use the command line, in the
+[Agent Skills](https://agentskills.io) `SKILL.md` format; `nomm skill --output <dir>` saves it where your
+agent looks for skills.
+
+From a checkout, run it with `./gradlew :composeApp:run --args="cli list"`.
+
 ## Credits
 - [RaylaValdez](https://github.com/RaylaValdez): `Server List Backend and NOSMR`
 - Shumatsu: `App Icon`

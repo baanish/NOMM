@@ -33,57 +33,73 @@ object Installer {
         onSuccess: () -> Unit,
     ) {
         scope.launch {
-            val currentJob = coroutineContext[Job]
-            val cancelAction: () -> Unit = {
-                currentJob?.cancel()
-            }
-
-            updateState(modId, TaskState(TaskState.Phase.DOWNLOADING, 0f, true, cancelAction), isBepInEx)
-
-            val mutex = locks.getOrPut(modId) { Mutex() }
-            var stagingDir: File? = null
-
             try {
-                mutex.withLockOrSkip {
-                    val bytes = downloadWithRetry(modId, url, isBepInEx, cancelAction) { downloadedBytes ->
-                        if (hash == null || SettingsManager.config.value.ignoreHashMismatch) true else {
-                            val expected = hash.removePrefix("sha256:").hexToByteArray().toByteString()
-                            
-                            downloadedBytes.toByteString().sha256() == expected
-                        }
-                    }
-
-                    updateState(modId, TaskState(TaskState.Phase.EXTRACTING, null, true, cancelAction), isBepInEx)
-
-                    stagingDir = withContext(Dispatchers.IO) {
-                        Files.createTempDirectory("nomm-install-").toFile()
-                    }
-
-                    withContext(Dispatchers.IO) {
-                        val staging = stagingDir ?: error("Install staging directory was not created")
-                        extract(bytes, url, staging, isBepInEx)
-                        if (isBepInEx) {
-                            validateBepInExStaging(staging)
-                            mergeStagedFiles(staging, dir)
-                        } else {
-                            promoteStagedDirectory(staging, dir)
-                        }
-                    }
-
-                    onSuccess()
-                }
+                install(modId, url, dir, hash, isBepInEx, onSuccess)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 Log.log("Install failed for $modId: ${e.message}")
                 runCatching { onError(e) }
-            } finally {
-                withContext(NonCancellable + Dispatchers.IO) {
-                    stagingDir?.deleteRecursively()
-                }
-                locks.remove(modId, mutex)
-                clearStatus(modId, isBepInEx)
             }
+        }
+    }
+
+    /**
+     * Downloads, verifies and extracts [url] into [dir], then runs [afterInstall] while still
+     * holding the mod's install lock. Returns false if an install of [modId] is already running.
+     */
+    suspend fun install(
+        modId: String, url: String, dir: File,
+        hash: String?,
+        isBepInEx: Boolean = false,
+        afterInstall: () -> Unit = {},
+    ): Boolean {
+        val currentJob = currentCoroutineContext()[Job]
+        val cancelAction: () -> Unit = {
+            currentJob?.cancel()
+        }
+
+        updateState(modId, TaskState(TaskState.Phase.DOWNLOADING, 0f, true, cancelAction), isBepInEx)
+
+        val mutex = locks.getOrPut(modId) { Mutex() }
+        var stagingDir: File? = null
+
+        try {
+            return mutex.withLockOrSkip {
+                val bytes = downloadWithRetry(modId, url, isBepInEx, cancelAction) { downloadedBytes ->
+                    if (hash == null || SettingsManager.config.value.ignoreHashMismatch) true else {
+                        val expected = hash.removePrefix("sha256:").hexToByteArray().toByteString()
+                        
+                        downloadedBytes.toByteString().sha256() == expected
+                    }
+                }
+
+                updateState(modId, TaskState(TaskState.Phase.EXTRACTING, null, true, cancelAction), isBepInEx)
+
+                stagingDir = withContext(Dispatchers.IO) {
+                    Files.createTempDirectory("nomm-install-").toFile()
+                }
+
+                withContext(Dispatchers.IO) {
+                    val staging = stagingDir ?: error("Install staging directory was not created")
+                    extract(bytes, url, staging, isBepInEx)
+                    if (isBepInEx) {
+                        validateBepInExStaging(staging)
+                        mergeStagedFiles(staging, dir)
+                    } else {
+                        promoteStagedDirectory(staging, dir)
+                    }
+                }
+
+                afterInstall()
+                true
+            } ?: false
+        } finally {
+            withContext(NonCancellable + Dispatchers.IO) {
+                stagingDir?.deleteRecursively()
+            }
+            locks.remove(modId, mutex)
+            clearStatus(modId, isBepInEx)
         }
     }
 

@@ -167,7 +167,7 @@ fun launchNuclearOption(windowState: WindowState) {
                 delay(1500L.milliseconds)
             }
 
-            val steamUri = "steam://rungameid/2168680"
+            val steamUri = NUCLEAR_OPTION_STEAM_URI
             Log.log("Launching game via Steam: $steamUri")
             
             val launched = try {
@@ -233,7 +233,7 @@ fun launchNuclearOption(windowState: WindowState) {
     }
 }
 
-private fun launchSteamPlatformSpecific(steamUri: String): Boolean {
+internal fun launchSteamPlatformSpecific(steamUri: String): Boolean {
     val os = System.getProperty("os.name").lowercase()
     return try {
         when {

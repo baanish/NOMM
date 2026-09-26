@@ -93,7 +93,6 @@ object RepoMods {
     val launchOptionDialog = MutableStateFlow(false)
 
     fun downloadBepInEx() {
-        val url = "https://github.com/BepInEx/BepInEx/releases/download/v5.4.23.4/BepInEx_win_x64_5.4.23.4.zip"
         if (isBepInExInstallationComplete(SettingsManager.gameFolder)) {
             return
         }
@@ -113,7 +112,7 @@ object RepoMods {
 
         Installer.installMod(
             modId = "BepInEx",
-            url = url,
+            url = BEPINEX_DOWNLOAD_URL,
             dir = gameFolder,
             hash = null,
             isBepInEx = true,
@@ -122,14 +121,7 @@ object RepoMods {
             },
             onSuccess = {
                 runCatching {
-                    val configDir = File(gameFolder, "BepInEx/config")
-                    configDir.mkdirs()
-                    File(configDir, "BepInEx.cfg").writeText(
-                        """
-                        [Chainloader]
-                        HideManagerGameObject = true
-                        """.trimIndent()
-                    )
+                    writeDefaultBepInExConfig(gameFolder)
                 }.onFailure { error ->
                     reportNommError("BepInEx configuration failed", error.message ?: "Could not write BepInEx.cfg.")
                 }

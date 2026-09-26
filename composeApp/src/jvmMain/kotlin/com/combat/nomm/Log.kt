@@ -1,6 +1,7 @@
 package com.combat.nomm
 
 import io.github.vinceglb.filekit.*
+import java.io.PrintStream
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -8,8 +9,11 @@ object Log {
     private val lock = Any()
     private val timestampFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
 
+    /** Where log lines are echoed. The CLI moves this off stdout, which it keeps for command output. */
+    var console: PrintStream? = System.out
+
     fun log(message: String) {
-        println("[NOMM] $message")
+        console?.println("[NOMM] $message")
         runCatching {
             val logFile = FileKit.filesDir / "logs" / "nomm.log"
             logFile.parent()?.createDirectories()

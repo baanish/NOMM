@@ -101,6 +101,16 @@ nucleus.application {
         "--enable-native-access=ALL-UNNAMED",
     )
 
+    // `nomm`: the same app as a console program, for the command line. Launcher arguments only
+    // apply when the user passes none, so CLI mode is switched on with a system property instead.
+    additionalLaunchers {
+        create("nomm") {
+            mainClass = "com.combat.nomm.MainKt"
+            jvmArgs("--enable-native-access=ALL-UNNAMED", "-Dnomm.cli=true")
+            winConsole = true
+        }
+    }
+
     val authorEmail = "787combat787@gmail.com"
     nativeDistributions {
         targetFormats(

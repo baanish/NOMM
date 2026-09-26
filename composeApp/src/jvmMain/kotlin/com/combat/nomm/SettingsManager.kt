@@ -116,11 +116,18 @@ object SettingsManager {
         }
     }
 
+    private var pendingManifestSave: Job? = null
+
     fun updateCachedManifest(newCachedManifest: CachedManifest) {
         cachedManifest.value = newCachedManifest
-        scope.launch {
+        pendingManifestSave = scope.launch {
             saveCachedManifest()
         }
+    }
+
+    /** Waits for a cached manifest write started by [updateCachedManifest], for processes about to exit. */
+    suspend fun awaitPendingManifestSave() {
+        pendingManifestSave?.join()
     }
 
     fun updateConfig(newConfig: Configuration) {

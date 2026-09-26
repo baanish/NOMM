@@ -19,6 +19,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.rememberWindowState
 import com.combat.nomm.LocalMods.refresh
+import com.combat.nomm.cli.Cli
+import com.combat.nomm.cli.DefaultCliEnvironment
 import com.combat.nomm.steamworker.runSteamWorker
 import dev.nucleusframework.application.NucleusBackend
 import dev.nucleusframework.application.aotTraining
@@ -37,6 +39,7 @@ import org.jetbrains.compose.resources.painterResource
 import java.io.File
 import java.net.URI
 import kotlin.io.path.toPath
+import kotlin.system.exitProcess
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -46,6 +49,13 @@ val LocalWindowState = compositionLocalOf<WindowState> { error("No WindowState p
 
 @OptIn(FlowPreview::class, ExperimentalComposeUiApi::class)
 fun main(args: Array<String>) {
+
+    // The `nomm` console launcher sets nomm.cli; `NOMM cli <command>` works from any launcher.
+    if (System.getProperty("nomm.cli") == "true" || args.firstOrNull() == "cli") {
+        val cliArgs = if (args.firstOrNull() == "cli") args.drop(1) else args.toList()
+        Log.console = if ("--verbose" in cliArgs) System.err else null
+        exitProcess(Cli(DefaultCliEnvironment()).run(cliArgs))
+    }
 
     if (args.contains("worker")) {
         runSteamWorker()
@@ -74,6 +84,7 @@ fun main(args: Array<String>) {
                 LocalMods.importMods(PlatformFile(initialFile))
             }
             refresh()
+            LocalMods.watchExternalChanges()
         }
 
         FileKit.init("NOMM")

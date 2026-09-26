@@ -309,30 +309,7 @@ object SteamDiscovery {
         if (now - lastGameRunningCheck < 1000) return lastGameRunningResult
         lastGameRunningCheck = now
 
-        lastGameRunningResult = try {
-            val os = System.getProperty("os.name").lowercase()
-            val isWindows = os.contains("win")
-            val processName = if (isWindows) {
-                "nuclearoption.exe"
-            } else {
-                "NuclearOption"
-            }
-            
-            ProcessHandle.allProcesses()
-                .anyMatch { process ->
-                    process.info().command()
-                        .map { cmd -> 
-                            if (isWindows) {
-                                cmd.lowercase().endsWith(processName)
-                            } else {
-                                cmd.endsWith(processName)
-                            }
-                        }
-                        .orElse(false)
-                }
-        } catch (_: Exception) {
-            false
-        }
+        lastGameRunningResult = isNuclearOptionRunning()
         return lastGameRunningResult
     }
 
